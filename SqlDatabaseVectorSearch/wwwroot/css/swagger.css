@@ -1,0 +1,4 @@
+.swagger-ui .parameters-col_description input[type=checkbox] {
+    max-width: 340px;
+    width: auto;
+}

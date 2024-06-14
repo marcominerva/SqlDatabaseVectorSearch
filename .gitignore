@@ -29,6 +29,7 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
+[Oo]ut/
 [Ll]og/
 [Ll]ogs/
 
@@ -90,7 +91,6 @@ StyleCopReport.xml
 *.tmp_proj
 *_wpftmp.csproj
 *.log
-*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -294,17 +294,6 @@ node_modules/
 # Visual Studio 6 auto-generated workspace file (contains which files were open etc.)
 *.vbw
 
-# Visual Studio 6 auto-generated project file (contains which files were open etc.)
-*.vbp
-
-# Visual Studio 6 workspace and project file (working project files containing files to include in project)
-*.dsw
-*.dsp
-
-# Visual Studio 6 technical files
-*.ncb
-*.aps
-
 # Visual Studio LightSwitch build output
 **/*.HTMLClient/GeneratedArtifacts
 **/*.DesktopClient/GeneratedArtifacts
@@ -361,9 +350,6 @@ ASALocalRun/
 # Local History for Visual Studio
 .localhistory/
 
-# Visual Studio History (VSHistory) files
-.vshistory/
-
 # BeatPulse healthcheck temp database
 healthchecksdb
 
@@ -396,3 +382,5 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+/SqlDatabaseVectorSearch/appsettings.local.json
