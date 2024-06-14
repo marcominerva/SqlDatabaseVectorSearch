@@ -1,4 +1,4 @@
 ﻿namespace SqlDatabaseVectorSearch.Models;
 
-public record Search(string Text);
+public record class Search(string Text);
 

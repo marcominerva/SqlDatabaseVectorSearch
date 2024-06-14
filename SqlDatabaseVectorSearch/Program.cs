@@ -63,7 +63,19 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-var documentsApiGroup = app.MapGroup("/api/documents");
+var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
+
+documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchService) =>
+{
+    var documents = await vectorSearchService.GetDocumentsAsync();
+    return TypedResults.Ok(documents);
+})
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Gets the list of documents";
+
+    return operation;
+});
 
 documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, LinkGenerator linkGenerator, Guid? documentId = null) =>
 {
@@ -79,8 +91,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the document will be overridden.";
 
     return operation;
-})
-;
+});
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {
@@ -90,26 +101,10 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorS
 .WithOpenApi(operation =>
 {
     operation.Summary = "Deletes a document";
-    operation.Description = "This endpoint deletes the documents and all its chunks from SQL Server";
+    operation.Description = "This endpoint deletes the document and all its chunks from SQL Server";
 
     return operation;
 });
-
-//app.MapPost("/api/search", async (Search search, ApplicationMemoryService memory, double minimumRelevance = 0, string? index = null) =>
-//{
-//    var response = await memory.SearchAsync(search, minimumRelevance, index);
-//    return TypedResults.Ok(response);
-//})
-//.WithOpenApi(operation =>
-//{
-//    operation.Summary = "Search into Kernel Memory";
-//    operation.Description = "Search into Kernel Memory using the provided question and optional tags. If tags are provided, they will be used as filters with OR logic.";
-
-//    operation.Parameter("minimumRelevance").Description = "The minimum Cosine Similarity required.";
-//    operation.Parameter("index").Description = "The index in which to search for documents. If not provided, the default index will be used ('default').";
-
-//    return operation;
-//});
 
 app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, bool reformulate = true) =>
 {
@@ -124,6 +119,7 @@ app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSear
     operation.Parameter("reformulate").Description = "If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
 
     return operation;
-});
+})
+.WithTags("Ask");
 
 app.Run();

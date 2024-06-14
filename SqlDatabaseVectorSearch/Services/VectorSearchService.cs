@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.DataAccessLayer;
-using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 using SqlDatabaseVectorSearch.Models;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
@@ -24,11 +24,11 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         }
         else
         {
-            // Creates a new document.
+            // Create a new document.
             documentId = Guid.NewGuid();
         }
 
-        var document = new Document { Id = documentId.Value, Name = name, CreationDate = DateTimeOffset.UtcNow };
+        var document = new Entities.Document { Id = documentId.Value, Name = name, CreationDate = DateTimeOffset.UtcNow };
         dbContext.Documents.Add(document);
 
         // Split the content into chunks of at most 1024 tokens and generate the embeddings for each one.
@@ -37,7 +37,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
         foreach (var (paragraph, embedding) in paragraphs.Zip(embeddings, (p, e) => (p, e.ToArray())))
         {
-            var documentChunk = new DocumentChunk { DocumentId = documentId.Value, Content = paragraph, Embedding = embedding };
+            var documentChunk = new Entities.DocumentChunk { DocumentId = documentId.Value, Content = paragraph, Embedding = embedding };
             dbContext.DocumentChunks.Add(documentChunk);
         }
 
@@ -45,17 +45,18 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         return documentId.Value;
     }
 
+    public async Task<IEnumerable<Document>> GetDocumentsAsync()
+    {
+        var documents = await dbContext.Documents.OrderBy(d => d.Name).AsNoTracking()
+            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.DocumentChunks.Count))
+            .ToListAsync();
+
+        return documents;
+    }
+
     public async Task DeleteDocumentAsync(Guid documentId)
     {
-        var document = await dbContext.Documents.Include(d => d.DocumentChunks).FirstOrDefaultAsync(d => d.Id == documentId);
-        if (document is null)
-        {
-            return;
-        }
-
-        dbContext.DocumentChunks.RemoveRange(document.DocumentChunks);
-        dbContext.Documents.Remove(document);
-
+        await DeleteDocumentInternalAsync(documentId);
         await dbContext.SaveChangesAsync();
     }
 
@@ -69,31 +70,12 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
         var chunks = await dbContext.DocumentChunks
             .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-            //.Select(c => new
-            //{
-            //    c.Id,
-            //    c.DocumentId,
-            //    c.Content,
-            //    Distance = EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray())
-            //})
             .Take(5)
             .ToListAsync();
 
         var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
         return new Response(reformulatedQuestion, answer);
     }
-
-    //public async Task<SearchResult?> SearchAsync(Search search, double minimumRelevance = 0, string? index = null)
-    //{
-    //    // Search using the embedding search via Kernel Memory .
-    //    // If tags are provided, use them as filters with OR logic.
-    //    var searchResult = await memory.SearchAsync(search.Text.TrimEnd([' ', '?']), index, filters: search.Tags.ToMemoryFilters(), minRelevance: minimumRelevance, limit: 50);
-
-    //    // If you want to use an AND logic, set the "filter" parameter (instead of "filters").
-    //    //var searchResult = await memory.SearchAsync(search.Text.TrimEnd([' ', '?']), index, filter: search.Tags.ToMemoryFilter(), minRelevance: minimumRelevance);
-
-    //    return searchResult;
-    //}
 
     private static Task<string> GetContentAsync(Stream stream)
     {
@@ -102,12 +84,24 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         // Reads the content of the PDF document using PdfPig.
         using var pdfDocument = PdfDocument.Open(stream);
 
-        foreach (var page in pdfDocument.GetPages().Where(x => x != null))
+        foreach (var page in pdfDocument.GetPages().Where(x => x is not null))
         {
             var pageContent = ContentOrderTextExtractor.GetText(page) ?? string.Empty;
             content.AppendLine(pageContent);
         }
 
         return Task.FromResult(content.ToString());
+    }
+
+    private async Task DeleteDocumentInternalAsync(Guid documentId)
+    {
+        var document = await dbContext.Documents.Include(d => d.DocumentChunks).FirstOrDefaultAsync(d => d.Id == documentId);
+        if (document is null)
+        {
+            return;
+        }
+
+        dbContext.DocumentChunks.RemoveRange(document.DocumentChunks);
+        dbContext.Documents.Remove(document);
     }
 }

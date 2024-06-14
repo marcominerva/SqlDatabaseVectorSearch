@@ -45,6 +45,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
             """);
 
+        // TODO: Ensure that the chunks are not too long, according to the model max token.
         foreach (var result in chunks.Select(c => c.Content))
         {
             prompt.AppendLine(result);
@@ -75,7 +76,6 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         }
 
         cache.Set(conversationId, chat, appSettingsOptions.Value.MessageExpiration);
-
         return Task.CompletedTask;
     }
 }
