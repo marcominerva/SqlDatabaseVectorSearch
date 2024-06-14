@@ -101,7 +101,7 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorS
 .WithOpenApi(operation =>
 {
     operation.Summary = "Deletes a document";
-    operation.Description = "This endpoint deletes the document and all its chunks from SQL Server";
+    operation.Description = "This endpoint deletes the document and all its chunks from SQL Server.";
 
     return operation;
 });
