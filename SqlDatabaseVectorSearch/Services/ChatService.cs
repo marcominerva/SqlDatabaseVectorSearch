@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
+using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
@@ -29,14 +31,40 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         return reformulatedQuestion.Content!;
     }
 
-    public async Task AddInteractionAsync(Guid conversationId, string question, string answer)
+    public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<DocumentChunk> chunks, string question)
     {
         var chat = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
 
-        chat.AddUserMessage(question);
-        chat.AddAssistantMessage(answer);
+        var prompt = new StringBuilder("""
+            You can use only the information provided in this chat to answer questions.
+            If you don't know the answer, reply suggesting to refine the question.
+            Never answer to questions that are not related to this chat.
+            You must answer in the same language of the user's question.
+            Using the following information:
+            ---
+
+            """);
+
+        foreach (var result in chunks.Select(c => c.Content))
+        {
+            prompt.AppendLine(result);
+            prompt.AppendLine("---");
+        }
+
+        prompt.AppendLine($"""
+            Answer the following question:
+            ---
+            {question}
+            """);
+
+        chat.AddUserMessage(prompt.ToString());
+
+        var answer = await chatCompletionService.GetChatMessageContentAsync(chat)!;
+        chat.AddAssistantMessage(answer.Content!);
 
         await UpdateCacheAsync(conversationId, chat);
+
+        return answer.Content!;
     }
 
     private Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)

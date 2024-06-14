@@ -26,6 +26,7 @@ builder.Services.AddMemoryCache();
 
 // Semantical Kernel is used to reformulate questions taking into account all the previous interactions, so that embeddings can be generate more accurately.
 builder.Services.AddKernel()
+    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
 builder.Services.AddScoped<ChatService>();
@@ -73,7 +74,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .WithOpenApi(operation =>
 {
     operation.Summary = "Uploads a document. Currently, only PDF files are supported";
-    operation.Description = "Uploads a document to SQL Server. The document will be indexed and used to answer questions. The documentId is optional, if not provided a new one will be generated. If you specify an existing documentId, the document will be overridden.";
+    operation.Description = "Uploads a document to SQL Server and saves its embeddings using Vector Support. The document will be indexed and used to answer questions.";
 
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the document will be overridden.";
 
@@ -88,7 +89,8 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorS
 })
 .WithOpenApi(operation =>
 {
-    operation.Summary = "Delete a document from SQL Server";
+    operation.Summary = "Deletes a document";
+    operation.Description = "This endpoint deletes the documents and all its chunks from SQL Server";
 
     return operation;
 });
@@ -109,26 +111,19 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorS
 //    return operation;
 //});
 
-//app.MapPost("/api/ask", async Task<Results<Ok<MemoryResponse>, NotFound>> (Question question, ApplicationMemoryService memory, bool reformulate = true, double minimumRelevance = 0, string? index = null) =>
-//{
-//    var response = await memory.AskQuestionAsync(question, reformulate, minimumRelevance, index);
-//    if (response is null)
-//    {
-//        return TypedResults.NotFound();
-//    }
+app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, bool reformulate = true) =>
+{
+    var response = await vectorSearchService.AskQuestionAsync(question, reformulate);
+    return TypedResults.Ok(response);
+})
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Asks a question";
+    operation.Description = "The question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
 
-//    return TypedResults.Ok(response);
-//})
-//.WithOpenApi(operation =>
-//{
-//    operation.Summary = "Ask a question to the Kernel Memory Service";
-//    operation.Description = "Ask a question to the Kernel Memory Service using the provided question and optional tags. The question will be reformulated taking into account the context of the chat identified by the given ConversationId. If tags are provided, they will be used as filters with OR logic.";
+    operation.Parameter("reformulate").Description = "If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
 
-//    operation.Parameter("reformulate").Description = "If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
-//    operation.Parameter("minimumRelevance").Description = "The minimum Cosine Similarity required.";
-//    operation.Parameter("index").Description = "The index in which to search for documents. If not provided, the default index will be used ('default').";
-
-//    return operation;
-//});
+    return operation;
+});
 
 app.Run();

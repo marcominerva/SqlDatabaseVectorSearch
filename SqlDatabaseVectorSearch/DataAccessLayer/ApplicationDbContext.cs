@@ -32,7 +32,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.Embedding)
                 .IsRequired()
-                .HasMaxLength(8000).IsVector();
+                .HasMaxLength(8000)
+                .IsVector();
 
             entity.HasOne(d => d.Document).WithMany(p => p.DocumentChunks)
                 .HasForeignKey(d => d.DocumentId)

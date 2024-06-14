@@ -4,6 +4,7 @@ using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
+using SqlDatabaseVectorSearch.Models;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
@@ -30,7 +31,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         var document = new Document { Id = documentId.Value, Name = name, CreationDate = DateTimeOffset.UtcNow };
         dbContext.Documents.Add(document);
 
-        // Splits the content into chunks of at most 1024 tokens and generate the embeddings for each one.
+        // Split the content into chunks of at most 1024 tokens and generate the embeddings for each one.
         var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, 300), 1024, 100);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
@@ -58,29 +59,29 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         await dbContext.SaveChangesAsync();
     }
 
-    //public async Task<MemoryResponse?> AskQuestionAsync(Question question, bool reformulate = true, double minimumRelevance = 0, string? index = null)
-    //{
-    //    // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
-    //    var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;
+    public async Task<Response?> AskQuestionAsync(Question question, bool reformulate = true)
+    {
+        // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
+        var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;
 
-    //    // Ask using the embedding search via Kernel Memory and the reformulated question.
-    //    // If tags are provided, use them as filters with OR logic.
-    //    var answer = await memory.AskAsync(reformulatedQuestion.TrimEnd([' ', '?']), index, filters: question.Tags.ToMemoryFilters(), minRelevance: minimumRelevance);
+        // Perform Vector Search on SQL Server.
+        var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion);
 
-    //    // If you want to use an AND logic, set the "filter" parameter (instead of "filters").
-    //    //var answer = await memory.AskAsync(reformulatedQuestion.TrimEnd([' ', '?'], index, filter: question.Tags.ToMemoryFilter(), minRelevance: minimumRelevance);
+        var chunks = await dbContext.DocumentChunks
+            .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
+            //.Select(c => new
+            //{
+            //    c.Id,
+            //    c.DocumentId,
+            //    c.Content,
+            //    Distance = EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray())
+            //})
+            .Take(5)
+            .ToListAsync();
 
-    //    if (answer.NoResult == false)
-    //    {
-    //        // If the answer has been found, add the interaction to the chat, so that it will be used for the next reformulation.
-    //        await chatService.AddInteractionAsync(question.ConversationId, reformulatedQuestion, answer.Result);
-
-    //        var response = new MemoryResponse(answer.Question, answer.Result, answer.RelevantSources);
-    //        return response;
-    //    }
-
-    //    return null;
-    //}
+        var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
+        return new Response(reformulatedQuestion, answer);
+    }
 
     //public async Task<SearchResult?> SearchAsync(Search search, double minimumRelevance = 0, string? index = null)
     //{
@@ -94,7 +95,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
     //    return searchResult;
     //}
 
-    private Task<string> GetContentAsync(Stream stream)
+    private static Task<string> GetContentAsync(Stream stream)
     {
         var content = new StringBuilder();
 
