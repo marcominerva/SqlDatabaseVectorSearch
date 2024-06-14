@@ -13,4 +13,4 @@ The application is a Minimal API that exposes endpoints to load documents, gener
 - [Create an Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart) on a server that has the Vector Support feature enabled.
 - Execute the [Scripts.sql](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/Scripts.sql) file to create the tables needed by the application.
 - Open the [appsettings.json](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/SqlDatabaseVectorSearch/appsettings.json) file and set the connection string to the database and the other settings required by Azure OpenAI.
-- Run the application and start importing your PDF document.
+- Run the application and start importing your PDF documents.
