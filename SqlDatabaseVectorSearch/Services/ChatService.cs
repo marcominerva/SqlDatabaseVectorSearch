@@ -23,6 +23,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
             """;
 
         chat.AddUserMessage(embeddingQuestion);
+
         var reformulatedQuestion = await chatCompletionService.GetChatMessageContentAsync(chat)!;
         chat.AddAssistantMessage(reformulatedQuestion.Content!);
 
@@ -33,13 +34,15 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
     public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<DocumentChunk> chunks, string question)
     {
-        var chat = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
-
-        var prompt = new StringBuilder("""
+        var chat = new ChatHistory(""""
+            """
             You can use only the information provided in this chat to answer questions.
             If you don't know the answer, reply suggesting to refine the question.
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question.
+            """");
+
+        var prompt = new StringBuilder("""
             Using the following information:
             ---
 
@@ -61,9 +64,13 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         chat.AddUserMessage(prompt.ToString());
 
         var answer = await chatCompletionService.GetChatMessageContentAsync(chat)!;
-        chat.AddAssistantMessage(answer.Content!);
 
-        await UpdateCacheAsync(conversationId, chat);
+        // Add question and answer to the chat history.
+        var history = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
+        history.AddUserMessage(question);
+        history.AddAssistantMessage(answer.Content!);
+
+        await UpdateCacheAsync(conversationId, history);
 
         return answer.Content!;
     }
