@@ -9,6 +9,8 @@ namespace SqlDatabaseVectorSearch.Services;
 
 public class ChatService(IMemoryCache cache, IChatCompletionService chatCompletionService, IOptions<AppSettings> appSettingsOptions)
 {
+    private readonly AppSettings appSettings = appSettingsOptions.Value;
+
     public async Task<string> CreateQuestionAsync(Guid conversationId, string question)
     {
         var chat = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
@@ -77,12 +79,12 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
     private Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)
     {
-        if (chat.Count > appSettingsOptions.Value.MessageLimit)
+        if (chat.Count > appSettings.MessageLimit)
         {
-            chat = new ChatHistory(chat.TakeLast(appSettingsOptions.Value.MessageLimit));
+            chat = new ChatHistory(chat.TakeLast(appSettings.MessageLimit));
         }
 
-        cache.Set(conversationId, chat, appSettingsOptions.Value.MessageExpiration);
+        cache.Set(conversationId, chat, appSettings.MessageExpiration);
         return Task.CompletedTask;
     }
 }

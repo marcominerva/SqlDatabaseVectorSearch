@@ -1,17 +1,21 @@
 ﻿using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
+using SqlDatabaseVectorSearch.Settings;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService)
+public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, IOptions<AppSettings> appSettingsOptions)
 {
+    private readonly AppSettings appSettings = appSettingsOptions.Value;
+
     public async Task<Guid> ImportAsync(Stream stream, string name, Guid? documentId)
     {
         // Extract the contents of the file (current, only PDF are supported).
@@ -31,8 +35,8 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         var document = new Entities.Document { Id = documentId.Value, Name = name, CreationDate = DateTimeOffset.UtcNow };
         dbContext.Documents.Add(document);
 
-        // Split the content into chunks of at most 1024 tokens and generate the embeddings for each one.
-        var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, 300), 1024, 100);
+        // Split the content into chunks and generate the embeddings for each one.
+        var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
         foreach (var (paragraph, embedding) in paragraphs.Zip(embeddings, (p, e) => (p, e.ToArray())))
@@ -70,7 +74,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
         var chunks = await dbContext.DocumentChunks
             .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-            .Take(5)
+            .Take(appSettings.MaxChunksCount)
             .ToListAsync();
 
         var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
