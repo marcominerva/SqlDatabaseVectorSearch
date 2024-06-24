@@ -8,7 +8,7 @@ public class AppSettings
 
     public int OverlapTokens { get; init; } = 100;
 
-    public int MaxChunksCount { get; init; } = 5;
+    public int MaxRelevantChunks { get; init; } = 6;
 
     public int MessageLimit { get; init; }
 

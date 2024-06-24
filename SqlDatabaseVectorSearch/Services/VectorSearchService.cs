@@ -74,7 +74,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
         var chunks = await dbContext.DocumentChunks
             .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-            .Take(appSettings.MaxChunksCount)
+            .Take(appSettings.MaxRelevantChunks)
             .ToListAsync();
 
         var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
