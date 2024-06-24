@@ -24,7 +24,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         if (documentId.HasValue)
         {
             // If the user is importing a document that already exists, delete the previous one.
-            await DeleteDocumentAsync(documentId.Value);
+            await DeleteDocumentAsync(documentId.Value, saveChanges: false);
         }
         else
         {
@@ -58,10 +58,21 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         return documents;
     }
 
-    public async Task DeleteDocumentAsync(Guid documentId)
+    public async Task DeleteDocumentAsync(Guid documentId, bool saveChanges = true)
     {
-        await DeleteDocumentInternalAsync(documentId);
-        await dbContext.SaveChangesAsync();
+        var document = await dbContext.Documents.Include(d => d.DocumentChunks).FirstOrDefaultAsync(d => d.Id == documentId);
+        if (document is null)
+        {
+            return;
+        }
+
+        dbContext.DocumentChunks.RemoveRange(document.DocumentChunks);
+        dbContext.Documents.Remove(document);
+
+        if (saveChanges)
+        {
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     public async Task<Response?> AskQuestionAsync(Question question, bool reformulate = true)
@@ -85,7 +96,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
     {
         var content = new StringBuilder();
 
-        // Reads the content of the PDF document using PdfPig.
+        // Read the content of the PDF document.
         using var pdfDocument = PdfDocument.Open(stream);
 
         foreach (var page in pdfDocument.GetPages().Where(x => x is not null))
@@ -95,17 +106,5 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         }
 
         return Task.FromResult(content.ToString());
-    }
-
-    private async Task DeleteDocumentInternalAsync(Guid documentId)
-    {
-        var document = await dbContext.Documents.Include(d => d.DocumentChunks).FirstOrDefaultAsync(d => d.Id == documentId);
-        if (document is null)
-        {
-            return;
-        }
-
-        dbContext.DocumentChunks.RemoveRange(document.DocumentChunks);
-        dbContext.Documents.Remove(document);
     }
 }
