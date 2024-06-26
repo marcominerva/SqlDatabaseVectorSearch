@@ -13,7 +13,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.6" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.6" />
         <PackageReference Include="Microsoft.SemanticKernel" Version="1.15.0" />
-		<PackageReference Include="MinimalHelpers.OpenApi" Version="2.0.8" />
+		<PackageReference Include="MinimalHelpers.OpenApi" Version="2.0.9" />
 		<PackageReference Include="PdfPig" Version="0.1.8" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 		<PackageReference Include="TinyHelpers" Version="3.1.7" />

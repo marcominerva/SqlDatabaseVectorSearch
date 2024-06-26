@@ -75,7 +75,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         }
     }
 
-    public async Task<Response?> AskQuestionAsync(Question question, bool reformulate = true)
+    public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true)
     {
         // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
         var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;

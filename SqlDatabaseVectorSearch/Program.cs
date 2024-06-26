@@ -80,7 +80,9 @@ documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchSe
 
 documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, LinkGenerator linkGenerator, Guid? documentId = null) =>
 {
-    documentId = await vectorSearchService.ImportAsync(file.OpenReadStream(), file.FileName, documentId);
+    using var stream = file.OpenReadStream();
+    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, documentId);
+
     return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
 })
 .DisableAntiforgery()
