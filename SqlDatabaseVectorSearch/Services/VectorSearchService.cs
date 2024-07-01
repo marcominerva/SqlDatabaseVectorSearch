@@ -52,7 +52,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
     public async Task<IEnumerable<Document>> GetDocumentsAsync()
     {
         var documents = await dbContext.Documents.OrderBy(d => d.Name).AsNoTracking()
-            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.DocumentChunks.Count))
+            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.Chunks.Count))
             .ToListAsync();
 
         return documents;
@@ -60,13 +60,13 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task DeleteDocumentAsync(Guid documentId, bool saveChanges = true)
     {
-        var document = await dbContext.Documents.Include(d => d.DocumentChunks).FirstOrDefaultAsync(d => d.Id == documentId);
+        var document = await dbContext.Documents.Include(d => d.Chunks).FirstOrDefaultAsync(d => d.Id == documentId);
         if (document is null)
         {
             return;
         }
 
-        dbContext.DocumentChunks.RemoveRange(document.DocumentChunks);
+        dbContext.DocumentChunks.RemoveRange(document.Chunks);
         dbContext.Documents.Remove(document);
 
         if (saveChanges)

@@ -8,5 +8,5 @@ public class Document
 
     public DateTimeOffset CreationDate { get; set; }
 
-    public virtual ICollection<DocumentChunk> DocumentChunks { get; set; } = [];
+    public virtual ICollection<DocumentChunk> Chunks { get; set; } = [];
 }
