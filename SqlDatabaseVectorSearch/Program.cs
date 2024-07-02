@@ -36,7 +36,7 @@ builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "SQL Server Vector Search API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "SQL Database Vector Search API", Version = "v1" });
 
     options.AddDefaultResponse();
     options.AddFormFile();
@@ -59,7 +59,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options =>
     {
         options.RoutePrefix = string.Empty;
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Kernel Memory Service API v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SQL Database Vector Search API v1");
         options.InjectStylesheet("/css/swagger.css");
     });
 }
@@ -78,7 +78,7 @@ documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchSe
     return operation;
 });
 
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, LinkGenerator linkGenerator, Guid? documentId = null) =>
+documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
     documentId = await vectorSearchService.ImportAsync(stream, file.FileName, documentId);
@@ -88,8 +88,8 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .DisableAntiforgery()
 .WithOpenApi(operation =>
 {
-    operation.Summary = "Uploads a document. Currently, only PDF files are supported";
-    operation.Description = "Uploads a document to SQL Server and saves its embeddings using Vector Support. The document will be indexed and used to answer questions.";
+    operation.Summary = "Uploads a document";
+    operation.Description = "Uploads a document to SQL Server and saves its embeddings using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
 
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the document will be overridden.";
 
