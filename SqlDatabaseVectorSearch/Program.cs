@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
@@ -74,7 +75,35 @@ documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchSe
 .WithOpenApi(operation =>
 {
     operation.Summary = "Gets the list of documents";
+    return operation;
+});
 
+documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, VectorSearchService vectorSearchService) =>
+{
+    var documents = await vectorSearchService.GetDocumentChunksAsync(documentId);
+    return TypedResults.Ok(documents);
+})
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Gets the list of chunks of a given document";
+    operation.Description = "The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.";
+
+    return operation;
+});
+
+documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, VectorSearchService vectorSearchService) =>
+{
+    var chunk = await vectorSearchService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
+    if (chunk is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    return TypedResults.Ok(chunk);
+})
+.WithOpenApi(operation =>
+{
+    operation.Summary = "Gets the details of a given chunk, includings its embedding";
     return operation;
 });
 
@@ -89,7 +118,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .WithOpenApi(operation =>
 {
     operation.Summary = "Uploads a document";
-    operation.Description = "Uploads a document to SQL Server and saves its embeddings using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
+    operation.Description = "Uploads a document to SQL Server and saves its embedding using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
 
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the document will be overridden.";
 

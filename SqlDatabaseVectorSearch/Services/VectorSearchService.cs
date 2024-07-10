@@ -39,9 +39,10 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
+        var index = 0;
         foreach (var (paragraph, embedding) in paragraphs.Zip(embeddings, (p, e) => (p, e.ToArray())))
         {
-            var documentChunk = new Entities.DocumentChunk { DocumentId = documentId.Value, Content = paragraph, Embedding = embedding };
+            var documentChunk = new Entities.DocumentChunk { DocumentId = documentId.Value, Index = index++, Content = paragraph, Embedding = embedding };
             dbContext.DocumentChunks.Add(documentChunk);
         }
 
@@ -56,6 +57,24 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
             .ToListAsync();
 
         return documents;
+    }
+
+    public async Task<IEnumerable<DocumentChunk>> GetDocumentChunksAsync(Guid documentId)
+    {
+        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index).AsNoTracking()
+            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, null))
+            .ToListAsync();
+
+        return documentChunks;
+    }
+
+    public async Task<DocumentChunk?> GetDocumentChunkEmbeddingAsync(Guid documentId, Guid documentChunkId)
+    {
+        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId).AsNoTracking()
+            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.Embedding))
+            .FirstOrDefaultAsync();
+
+        return documentChunk;
     }
 
     public async Task DeleteDocumentAsync(Guid documentId, bool saveChanges = true)

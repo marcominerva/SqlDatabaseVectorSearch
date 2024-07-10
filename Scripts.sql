@@ -1,6 +1,7 @@
 CREATE TABLE [dbo].[DocumentChunks](
 	[Id] [uniqueidentifier] NOT NULL,
 	[DocumentId] [uniqueidentifier] NOT NULL,
+	[Index] INT NOT NULL,
 	[Content] [nvarchar](max) NOT NULL,
 	[Embedding] [varbinary](8000) NOT NULL,
  CONSTRAINT [PK_DocumentChunks] PRIMARY KEY CLUSTERED 

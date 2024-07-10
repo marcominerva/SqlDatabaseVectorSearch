@@ -6,6 +6,8 @@ public partial class DocumentChunk
 
     public Guid DocumentId { get; set; }
 
+    public int Index { get; set; }
+
     public required string Content { get; set; }
 
     public required float[] Embedding { get; set; }
