@@ -19,7 +19,6 @@ var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configur
 
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
-    options.EnableRetryOnFailure(3, TimeSpan.FromSeconds(1), null);
     options.UseVectorSearch();
 });
 
