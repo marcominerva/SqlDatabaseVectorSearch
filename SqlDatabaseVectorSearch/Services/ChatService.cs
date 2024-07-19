@@ -50,7 +50,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
             """);
 
-        // TODO: Ensure that the chunks are not too long, according to the model max token.
+        // TODO: Ensure that chunks are not too long, according to the model max token.
         foreach (var result in chunks.Select(c => c.Content))
         {
             prompt.AppendLine(result);
