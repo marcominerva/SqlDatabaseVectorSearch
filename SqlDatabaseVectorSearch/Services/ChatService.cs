@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
-using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
@@ -34,7 +33,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         return reformulatedQuestion.Content!;
     }
 
-    public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<DocumentChunk> chunks, string question)
+    public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
         var chat = new ChatHistory(""""
             """
@@ -51,7 +50,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
             """);
 
         // TODO: Ensure that chunks are not too long, according to the model max token.
-        foreach (var result in chunks.Select(c => c.Content))
+        foreach (var result in chunks)
         {
             prompt.AppendLine(result);
             prompt.AppendLine("---");

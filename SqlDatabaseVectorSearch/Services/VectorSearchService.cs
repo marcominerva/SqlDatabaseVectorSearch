@@ -104,6 +104,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
         var chunks = await dbContext.DocumentChunks
             .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
+            .Select(c => c.Content)
             .Take(appSettings.MaxRelevantChunks)
             .ToListAsync();
 
