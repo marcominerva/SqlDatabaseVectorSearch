@@ -118,7 +118,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .WithOpenApi(operation =>
 {
     operation.Summary = "Uploads a document";
-    operation.Description = "Uploads a document to SQL Server and saves its embedding using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
+    operation.Description = "Uploads a document to SQL Database and saves its embedding using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
 
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the document will be overridden.";
 
@@ -133,7 +133,7 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorS
 .WithOpenApi(operation =>
 {
     operation.Summary = "Deletes a document";
-    operation.Description = "This endpoint deletes the document and all its chunks from SQL Server.";
+    operation.Description = "This endpoint deletes the document and all its chunks.";
 
     return operation;
 });
