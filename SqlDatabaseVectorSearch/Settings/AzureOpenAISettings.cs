@@ -14,6 +14,4 @@ public class ServiceSettings
     public required string Deployment { get; init; }
 
     public required string ApiKey { get; init; }
-
-    public required int MaxTokens { get; init; } = 8191;
 }
