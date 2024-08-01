@@ -39,7 +39,6 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "SQL Database Vector Search API", Version = "v1" });
 
     options.AddDefaultResponse();
-    options.AddFormFile();
 });
 
 builder.Services.AddDefaultProblemDetails();
