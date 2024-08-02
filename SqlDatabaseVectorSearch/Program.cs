@@ -20,6 +20,9 @@ var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configur
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
+}, options =>
+{
+    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
 builder.Services.AddMemoryCache();

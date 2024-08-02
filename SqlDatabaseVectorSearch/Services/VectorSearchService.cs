@@ -57,7 +57,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task<IEnumerable<Document>> GetDocumentsAsync()
     {
-        var documents = await dbContext.Documents.OrderBy(d => d.Name).AsNoTracking()
+        var documents = await dbContext.Documents.OrderBy(d => d.Name)
             .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.Chunks.Count))
             .ToListAsync();
 
@@ -66,7 +66,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task<IEnumerable<DocumentChunk>> GetDocumentChunksAsync(Guid documentId)
     {
-        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index).AsNoTracking()
+        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index)
             .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, null))
             .ToListAsync();
 
@@ -75,7 +75,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task<DocumentChunk?> GetDocumentChunkEmbeddingAsync(Guid documentId, Guid documentChunkId)
     {
-        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId).AsNoTracking()
+        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId)
             .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.Embedding))
             .FirstOrDefaultAsync();
 
