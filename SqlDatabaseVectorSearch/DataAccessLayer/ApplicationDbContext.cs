@@ -15,13 +15,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         base.OnConfiguring(optionsBuilder);
 
         optionsBuilder.UseExceptionProcessor();
+        //optionsBuilder.EnableSensitiveDataLogging();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Document>(entity =>
         {
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.ToTable("Documents");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(255);
@@ -29,7 +33,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<DocumentChunk>(entity =>
         {
-            entity.Property(e => e.Id).HasDefaultValueSql("(newid())");
+            entity.ToTable("DocumentChunks");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.Embedding)
                 .IsRequired()
@@ -38,7 +45,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasOne(d => d.Document).WithMany(p => p.Chunks)
                 .HasForeignKey(d => d.DocumentId)
-                .OnDelete(DeleteBehavior.NoAction)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_DocumentChunks_Documents");
         });
     }

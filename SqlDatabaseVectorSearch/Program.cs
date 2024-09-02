@@ -17,6 +17,8 @@ builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, relo
 var aiSettings = builder.Configuration.GetSection<AzureOpenAISettings>("AzureOpenAI")!;
 var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
 
+builder.Services.AddSingleton(TimeProvider.System);
+
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
