@@ -18,7 +18,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task<Guid> ImportAsync(Stream stream, string name, Guid? documentId)
     {
-        // Extract the contents of the file (current, only PDF are supported).
+        // Extract the contents of the file (currently, only PDF files are supported).
         var content = await GetContentAsync(stream);
 
         await dbContext.Database.BeginTransactionAsync();
@@ -84,7 +84,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
         var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;
 
-        // Perform Vector Search on SQL Server.
+        // Perform Vector Search on SQL Database.
         var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion);
 
         var chunks = await dbContext.DocumentChunks
