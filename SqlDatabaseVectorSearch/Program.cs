@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
 using MinimalHelpers.OpenApi;
-using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
@@ -19,12 +19,10 @@ var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configur
 
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
+builder.Services.AddScoped(_ =>
 {
-    options.UseVectorSearch();
-}, options =>
-{
-    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+    var sqlConnection = new SqlConnection(builder.Configuration.GetConnectionString("SqlConnection"));
+    return sqlConnection;
 });
 
 builder.Services.AddMemoryCache();
