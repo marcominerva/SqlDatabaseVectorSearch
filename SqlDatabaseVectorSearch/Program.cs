@@ -30,7 +30,7 @@ builder.Services.AddMemoryCache();
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
 builder.Services.AddKernel()
-    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey)
+    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
 builder.Services.AddScoped<ChatService>();
