@@ -1,18 +1,21 @@
-﻿using System.Text;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Data;
+using System.Data.Common;
+using System.Text;
+using System.Text.Json;
+using Dapper;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
-using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
+using TinyHelpers.Extensions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
-using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions)
+public class VectorSearchService(SqlConnection sqlConnection, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -21,63 +24,106 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         // Extract the contents of the file (currently, only PDF files are supported).
         var content = await GetContentAsync(stream);
 
-        await dbContext.Database.BeginTransactionAsync();
+        await sqlConnection.OpenAsync();
+        await using var transaction = await sqlConnection.BeginTransactionAsync();
 
         if (documentId.HasValue)
         {
             // If the user is importing a document that already exists, delete the previous one.
-            await DeleteDocumentAsync(documentId.Value);
+            await DeleteDocumentAsync(documentId.Value, transaction);
         }
 
-        var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
-        dbContext.Documents.Add(document);
+        await using var command = sqlConnection.CreateCommand();
+        command.Transaction = (SqlTransaction)transaction;
+
+        command.CommandText = """
+            INSERT INTO Documents (Id, [Name], CreationDate)
+            OUTPUT INSERTED.Id
+            VALUES (@Id, @Name, @CreationDate);
+            """;
+
+        command.Parameters.AddWithValue("@Id", documentId.GetValueOrDefault(Guid.NewGuid()));
+        command.Parameters.AddWithValue("@Name", name);
+        command.Parameters.AddWithValue("@CreationDate", timeProvider.GetUtcNow());
+
+        var insertedId = await command.ExecuteScalarAsync();
+        documentId = (Guid)insertedId!;
 
         // Split the content into chunks and generate the embeddings for each one.
         var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
-        var index = 0;
-        foreach (var (paragraph, embedding) in paragraphs.Zip(embeddings, (p, e) => (p, e.ToArray())))
+        foreach (var (paragraph, index) in paragraphs.WithIndex())
         {
-            var documentChunk = new Entities.DocumentChunk { Document = document, Index = index++, Content = paragraph, Embedding = embedding };
-            dbContext.DocumentChunks.Add(documentChunk);
+            command.Parameters.Clear();
+
+            command.CommandText = $"""
+                INSERT INTO DocumentChunks (DocumentId, [Index], Content, Embedding)
+                VALUES (@DocumentId, @Index, @Content, CAST(@Embedding AS VECTOR({embeddings[index].Length})));
+                """;
+
+            command.Parameters.AddWithValue("@DocumentId", documentId);
+            command.Parameters.AddWithValue("@Index", index);
+            command.Parameters.AddWithValue("@Content", paragraph);
+            command.Parameters.AddWithValue("@Embedding", JsonSerializer.Serialize(embeddings[index]));
+
+            await command.ExecuteNonQueryAsync();
         }
 
-        await dbContext.SaveChangesAsync();
-        await dbContext.Database.CommitTransactionAsync();
+        await transaction.CommitAsync();
 
-        return document.Id;
+        return documentId.Value;
     }
 
     public async Task<IEnumerable<Document>> GetDocumentsAsync()
     {
-        var documents = await dbContext.Documents.OrderBy(d => d.Name)
-            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.Chunks.Count))
-            .ToListAsync();
+        var documents = await sqlConnection.QueryAsync<Document>("""
+            SELECT Id, [Name], CreationDate, ChunkCount = (SELECT COUNT(*) FROM DocumentChunks WHERE DocumentId = Documents.Id)
+            FROM Documents
+            ORDER BY [Name];
+            """);
 
         return documents;
     }
 
     public async Task<IEnumerable<DocumentChunk>> GetDocumentChunksAsync(Guid documentId)
     {
-        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, null))
-            .ToListAsync();
+        var documentChunks = await sqlConnection.QueryAsync<DocumentChunk>("""
+            SELECT Id, [Index], Content
+            FROM DocumentChunks
+            WHERE DocumentId = @DocumentId
+            ORDER BY [Index];
+            """, new { documentId });
 
         return documentChunks;
     }
 
     public async Task<DocumentChunk?> GetDocumentChunkEmbeddingAsync(Guid documentId, Guid documentChunkId)
     {
-        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.Embedding))
-            .FirstOrDefaultAsync();
+        var documentChunk = await sqlConnection.QueryFirstOrDefaultAsync<DocumentChunk>("""
+            SELECT Id, [Index], Content, CAST(Embedding AS NVARCHAR(MAX)) AS Embedding
+            FROM DocumentChunks
+            WHERE Id = @DocumentChunkId AND DocumentId = @DocumentId;
+            """, new { documentId, documentChunkId });
 
         return documentChunk;
     }
 
-    public Task DeleteDocumentAsync(Guid documentId)
-        => dbContext.Documents.Where(d => d.Id == documentId).ExecuteDeleteAsync();
+    public async Task DeleteDocumentAsync(Guid documentId, DbTransaction? transaction = null)
+    {
+        if (sqlConnection.State == ConnectionState.Closed)
+        {
+            await sqlConnection.OpenAsync();
+        }
+
+        await using var command = sqlConnection.CreateCommand();
+        command.Transaction = transaction as SqlTransaction;
+
+        command.CommandText = "DELETE FROM Documents WHERE Id = @DocumentId";
+        command.Parameters.AddWithValue("@DocumentId", documentId);
+
+        await command.ExecuteNonQueryAsync();
+    }
 
     public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true)
     {
@@ -87,11 +133,11 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         // Perform Vector Search on SQL Database.
         var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion);
 
-        var chunks = await dbContext.DocumentChunks
-            .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-            .Select(c => c.Content)
-            .Take(appSettings.MaxRelevantChunks)
-            .ToListAsync();
+        var chunks = await sqlConnection.QueryAsync<string>($"""
+            SELECT TOP (@MaxRelevantChunks) Content
+            FROM DocumentChunks
+            ORDER BY VECTOR_DISTANCE('cosine', Embedding, CAST(@QuestionEmbedding AS VECTOR({questionEmbedding.Length})));
+            """, new { appSettings.MaxRelevantChunks, QuestionEmbedding = JsonSerializer.Serialize(questionEmbedding) });
 
         var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
         return new Response(reformulatedQuestion, answer);

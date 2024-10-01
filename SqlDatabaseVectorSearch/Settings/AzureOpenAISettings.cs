@@ -4,7 +4,7 @@ public class AzureOpenAISettings
 {
     public required ServiceSettings ChatCompletion { get; init; }
 
-    public required ServiceSettings Embedding { get; init; }
+    public required EmbeddingServiceSettings Embedding { get; init; }
 }
 
 public class ServiceSettings
@@ -14,4 +14,9 @@ public class ServiceSettings
     public required string Deployment { get; init; }
 
     public required string ApiKey { get; init; }
+}
+
+public class EmbeddingServiceSettings : ServiceSettings
+{
+    public int? Dimensions { get; set; }
 }

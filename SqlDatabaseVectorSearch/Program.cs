@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
 using MinimalHelpers.OpenApi;
-using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
@@ -19,12 +19,10 @@ var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configur
 
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
+builder.Services.AddScoped(_ =>
 {
-    options.UseVectorSearch();
-}, options =>
-{
-    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+    var sqlConnection = new SqlConnection(builder.Configuration.GetConnectionString("SqlConnection"));
+    return sqlConnection;
 });
 
 builder.Services.AddMemoryCache();
@@ -32,7 +30,7 @@ builder.Services.AddMemoryCache();
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
 builder.Services.AddKernel()
-    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey)
+    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
 builder.Services.AddScoped<ChatService>();
@@ -120,7 +118,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .WithOpenApi(operation =>
 {
     operation.Summary = "Uploads a document";
-    operation.Description = "Uploads a document to SQL Database and saves its embedding using Vector Support. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
+    operation.Description = "Uploads a document to SQL Database and saves its embedding using the new native Vector type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
 
     operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.";
 
