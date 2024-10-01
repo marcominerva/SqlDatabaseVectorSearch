@@ -2,7 +2,7 @@ CREATE TABLE [dbo].[Documents](
 	[Id] [uniqueidentifier] NOT NULL,
 	[Name] [nvarchar](255) NOT NULL,
 	[CreationDate] [datetimeoffset](7) NOT NULL,
- CONSTRAINT [PK_Documents2] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_Documents] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
 ))
@@ -14,7 +14,7 @@ CREATE TABLE [dbo].[DocumentChunks](
 	[Index] [int] NOT NULL,
 	[Content] [nvarchar](max) NOT NULL,
 	[Embedding] [vector](1536) NOT NULL,
- CONSTRAINT [PK_DocumentChunks2] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_DocumentChunks] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
 )) 
