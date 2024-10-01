@@ -139,27 +139,6 @@ public class VectorSearchService(SqlConnection sqlConnection, ITextEmbeddingGene
             ORDER BY VECTOR_DISTANCE('cosine', Embedding, CAST(@QuestionEmbedding AS VECTOR({questionEmbedding.Length})));
             """, new { appSettings.MaxRelevantChunks, QuestionEmbedding = JsonSerializer.Serialize(questionEmbedding) });
 
-        //await sqlConnection.OpenAsync();
-        //await using var command = sqlConnection.CreateCommand();
-
-        //command.CommandText = $"""
-        //    SELECT TOP (@MaxRelevantChunks) Content
-        //    FROM DocumentChunks
-        //    ORDER BY VECTOR_DISTANCE('cosine', Embedding, CAST(@QuestionEmbedding AS VECTOR({questionEmbedding.Length})));
-        //    """;
-
-        //command.Parameters.AddWithValue("@MaxRelevantChunks", appSettings.MaxRelevantChunks);
-        //command.Parameters.AddWithValue("@QuestionEmbedding", JsonSerializer.Serialize(questionEmbedding));
-
-        //var chunks = new List<string>();
-
-        //await using var reader = await command.ExecuteReaderAsync();
-        //while (await reader.ReadAsync())
-        //{
-        //    var content = reader.GetString(0);
-        //    chunks.Add(content);
-        //}
-
         var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
         return new Response(reformulatedQuestion, answer);
     }

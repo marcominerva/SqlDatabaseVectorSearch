@@ -13,6 +13,7 @@ CREATE TABLE [dbo].[DocumentChunks](
 	[DocumentId] [uniqueidentifier] NOT NULL,
 	[Index] [int] NOT NULL,
 	[Content] [nvarchar](max) NOT NULL,
+    -- Set the size of the vector to the same size of the your embedding model.
 	[Embedding] [vector](1536) NOT NULL,
  CONSTRAINT [PK_DocumentChunks] PRIMARY KEY CLUSTERED 
 (
