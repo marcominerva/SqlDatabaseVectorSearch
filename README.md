@@ -1,5 +1,5 @@
 # SQL Database Vector Search Sample
-A repository that showcases the native Vector type in Azure SQL Database to perform embeddings and RAG with Azure OpenAI.
+A repository that showcases the native VECTOR type in Azure SQL Database to perform embeddings and RAG with Azure OpenAI.
 
 > [!IMPORTANT]  
 > Usage of this application requires the Vector support feature in Azure SQL Database, currently in EAP. [See this blog post](https://devblogs.microsoft.com/azure-sql/announcing-eap-native-vector-support-in-azure-sql-database/) for more details.
