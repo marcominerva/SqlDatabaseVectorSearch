@@ -37,8 +37,8 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
     {
         var chat = new ChatHistory(""""
             """
-            You can use only the information provided in this chat to answer questions.
-            If you don't know the answer, reply suggesting to refine the question.
+            You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
+            For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question.
             """");
