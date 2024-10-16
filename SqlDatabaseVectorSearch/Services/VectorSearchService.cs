@@ -33,41 +33,25 @@ public class VectorSearchService(SqlConnection sqlConnection, ITextEmbeddingGene
             await DeleteDocumentAsync(documentId.Value, transaction);
         }
 
-        await using var command = sqlConnection.CreateCommand();
-        command.Transaction = (SqlTransaction)transaction;
-
-        command.CommandText = """
+        documentId = await sqlConnection.ExecuteScalarAsync<Guid>($"""
             INSERT INTO Documents (Id, [Name], CreationDate)
             OUTPUT INSERTED.Id
             VALUES (@Id, @Name, @CreationDate);
-            """;
-
-        command.Parameters.AddWithValue("@Id", documentId.GetValueOrDefault(Guid.NewGuid()));
-        command.Parameters.AddWithValue("@Name", name);
-        command.Parameters.AddWithValue("@CreationDate", timeProvider.GetUtcNow());
-
-        var insertedId = await command.ExecuteScalarAsync();
-        documentId = (Guid)insertedId!;
+            """, new { Id = documentId.GetValueOrDefault(Guid.NewGuid()), Name = name, CreationDate = timeProvider.GetUtcNow() },
+            transaction);
 
         // Split the content into chunks and generate the embeddings for each one.
         var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
+        // Save the document chunks and the corresponding embedding in the database.
         foreach (var (paragraph, index) in paragraphs.WithIndex())
         {
-            command.Parameters.Clear();
-
-            command.CommandText = $"""
+            await sqlConnection.ExecuteAsync($"""
                 INSERT INTO DocumentChunks (DocumentId, [Index], Content, Embedding)
                 VALUES (@DocumentId, @Index, @Content, CAST(@Embedding AS VECTOR({embeddings[index].Length})));
-                """;
-
-            command.Parameters.AddWithValue("@DocumentId", documentId);
-            command.Parameters.AddWithValue("@Index", index);
-            command.Parameters.AddWithValue("@Content", paragraph);
-            command.Parameters.AddWithValue("@Embedding", JsonSerializer.Serialize(embeddings[index]));
-
-            await command.ExecuteNonQueryAsync();
+                """, new { DocumentId = documentId, Index = index, Content = paragraph, Embedding = JsonSerializer.Serialize(embeddings[index]) },
+                transaction);
         }
 
         await transaction.CommitAsync();
@@ -109,21 +93,8 @@ public class VectorSearchService(SqlConnection sqlConnection, ITextEmbeddingGene
         return documentChunk;
     }
 
-    public async Task DeleteDocumentAsync(Guid documentId, DbTransaction? transaction = null)
-    {
-        if (sqlConnection.State == ConnectionState.Closed)
-        {
-            await sqlConnection.OpenAsync();
-        }
-
-        await using var command = sqlConnection.CreateCommand();
-        command.Transaction = transaction as SqlTransaction;
-
-        command.CommandText = "DELETE FROM Documents WHERE Id = @DocumentId";
-        command.Parameters.AddWithValue("@DocumentId", documentId);
-
-        await command.ExecuteNonQueryAsync();
-    }
+    public Task DeleteDocumentAsync(Guid documentId, DbTransaction? transaction = null)
+        => sqlConnection.ExecuteAsync("DELETE FROM Documents WHERE Id = @DocumentId", new { DocumentId = documentId }, transaction);
 
     public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true)
     {
