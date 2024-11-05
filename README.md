@@ -4,10 +4,10 @@ A repository that showcases the native VECTOR type in Azure SQL Database to perf
 > [!IMPORTANT]  
 > Usage of this application requires the Vector support feature in Azure SQL Database or Managed Instance, currently in EAP. [See this blog post](https://devblogs.microsoft.com/azure-sql/announcing-eap-native-vector-support-in-azure-sql-database/) for more details.
 
-The application is a Minimal API that exposes endpoints to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, only PDF files are supported. Embedding and Chat Completion are integrated with [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
+The application is a Minimal API that exposes endpoints to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, only PDF files are supported. Vectors are saved and retrieved using direct SQL queries with [Dapper](https://github.com/DapperLib/Dapper). Embedding and Chat Completion are integrated with [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
 
 > [!NOTE]
-> Vectors are saved and retrieved using direct SQL queries with [Dapper](https://github.com/DapperLib/Dapper). If you prefer to use Entity Framework Core, check out the [master branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/master).
+> If you prefer to use Entity Framework Core, check out the [master branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/master).
 
 ![SQL Database Vector Search](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/SqlDatabaseVectorSearch.png)
 
