@@ -39,8 +39,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Content).IsRequired();
             entity.Property(e => e.Embedding)
-                .IsRequired()
-                .HasColumnType("vector(1536)");
+                .HasColumnType("vector(1536)")
+                .IsRequired();
 
             entity.HasOne(d => d.Document).WithMany(p => p.Chunks)
                 .HasForeignKey(d => d.DocumentId)
