@@ -6,6 +6,7 @@ using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
+using TinyHelpers.Extensions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
@@ -36,10 +37,10 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
-        var index = 0;
-        foreach (var (paragraph, embedding) in paragraphs.Zip(embeddings, (p, e) => (p, e.ToArray())))
+        // Save the document chunks and the corresponding embedding in the database.
+        foreach (var (paragraph, index) in paragraphs.WithIndex())
         {
-            var documentChunk = new Entities.DocumentChunk { Document = document, Index = index++, Content = paragraph, Embedding = embedding };
+            var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
             dbContext.DocumentChunks.Add(documentChunk);
         }
 

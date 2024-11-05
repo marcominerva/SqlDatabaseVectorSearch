@@ -46,6 +46,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
             You can use only the information provided in this chat to answer questions.
             Every piece of information starts with the ID of the chunk it refers.
             If you don't know the answer, reply suggesting to refine the question.
+            For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".            
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question.
             The answer must be in JSON format with the following structure:
@@ -78,7 +79,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
         chat.AddUserMessage(prompt.ToString());
 
-        var responseJson = await chatCompletionService.GetChatMessageContentAsync(chat, new OpenAIPromptExecutionSettings { ResponseFormat = ChatResponseFormat.JsonObject })!;
+        var responseJson = await chatCompletionService.GetChatMessageContentAsync(chat, new OpenAIPromptExecutionSettings { ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat() })!;
         var response = JsonSerializer.Deserialize<ChatResponse>(responseJson.Content!, jsonSerializerOptions)!;
 
         // Add question and answer to the chat history.
