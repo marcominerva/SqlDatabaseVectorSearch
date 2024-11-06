@@ -35,7 +35,7 @@ builder.Services.AddKernel()
     .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
-builder.Services.AddScoped<ChatService>();
+builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddEndpointsApiExplorer();
