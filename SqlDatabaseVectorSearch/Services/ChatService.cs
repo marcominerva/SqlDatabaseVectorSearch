@@ -41,8 +41,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
     public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<DocumentChunk> chunks, string question)
     {
-        var chat = new ChatHistory(""""
-            """
+        var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions.
             Every piece of information starts with the ID of the chunk it refers.
             If you don't know the answer, reply suggesting to refine the question.
@@ -55,7 +54,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
                 "answer": "The answer to the question.",
                 "sources": [ "The list of IDs of the chunks that contain the information that have been used to provide the answer." ],
             }
-            """");
+            """);
 
         var prompt = new StringBuilder("""
             Using the following information:
@@ -67,7 +66,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         foreach (var chunk in chunks)
         {
             prompt.AppendLine(chunk.Id.ToString());
-            prompt.AppendLine(chunk.Content);
+            prompt.Append(chunk.Content);
             prompt.AppendLine("---");
         }
 
