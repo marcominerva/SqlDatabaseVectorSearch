@@ -35,13 +35,12 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
     public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
-        var chat = new ChatHistory(""""
-            """
+        var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
             For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question.
-            """");
+            """);
 
         var prompt = new StringBuilder("""
             Using the following information:
@@ -52,7 +51,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         // TODO: Ensure that chunks are not too long, according to the model max token.
         foreach (var result in chunks)
         {
-            prompt.AppendLine(result);
+            prompt.Append(result);
             prompt.AppendLine("---");
         }
 
