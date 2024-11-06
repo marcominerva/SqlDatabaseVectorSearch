@@ -2,11 +2,12 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class ChatService(IMemoryCache cache, IChatCompletionService chatCompletionService, IOptions<AppSettings> appSettingsOptions)
+public class ChatService(IMemoryCache cache, IChatCompletionService chatCompletionService, TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -35,36 +36,54 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
     public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
-        var chat = new ChatHistory(""""
-            """
+        var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
             For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question.
-            """");
+            """);
 
-        var prompt = new StringBuilder("""
+        var prompt = new StringBuilder($"""
+            Answer the following question:
+            ---
+            {question}
+            ---           
             Using the following information:
             ---
 
             """);
 
-        // TODO: Ensure that chunks are not too long, according to the model max token.
-        foreach (var result in chunks)
-        {
-            prompt.AppendLine(result);
-            prompt.AppendLine("---");
-        }
+        var tokensAvailable = appSettings.MaxInputTokens
+                              - tokenizerService.CountTokens(chat[0].ToString()) - tokenizerService.CountTokens(prompt.ToString())
+                              - appSettings.MaxOutputTokens;    // To ensure there is enough space for the answer.
 
-        prompt.AppendLine($"""
-            Answer the following question:
-            ---
-            {question}
-            """);
+        foreach (var chunk in chunks)
+        {
+            var text = $"{chunk}---";
+
+            var tokenCount = tokenizerService.CountTokens(text);
+            if (tokenCount > tokensAvailable)
+            {
+                // There isn't enough space to add the text.
+                break;
+            }
+
+            prompt.AppendLine(text);
+
+            tokensAvailable -= tokenCount;
+            if (tokensAvailable <= 0)
+            {
+                // There isn't enough space to add more chunks.
+                break;
+            }
+        }
 
         chat.AddUserMessage(prompt.ToString());
 
-        var answer = await chatCompletionService.GetChatMessageContentAsync(chat)!;
+        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = appSettings.MaxOutputTokens
+        });
 
         // Add question and answer to the chat history.
         var history = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
