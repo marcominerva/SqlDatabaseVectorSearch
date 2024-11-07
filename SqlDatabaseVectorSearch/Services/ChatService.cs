@@ -44,18 +44,18 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
         var prompt = new StringBuilder("""
             Using the following information:
-            ---
 
             """);
 
         // TODO: Ensure that chunks are not too long, according to the model max token.
         foreach (var text in chunks)
         {
-            prompt.Append(text);
             prompt.AppendLine("---");
+            prompt.Append(text);
         }
 
         prompt.AppendLine($"""
+            =====
             Answer the following question:
             ---
             {question}
