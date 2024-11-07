@@ -47,9 +47,8 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
             Answer the following question:
             ---
             {question}
-            ---           
+            =====          
             Using the following information:
-            ---
 
             """);
 
@@ -59,7 +58,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
 
         foreach (var chunk in chunks)
         {
-            var text = $"{chunk}---";
+            var text = $"---{Environment.NewLine}{chunk}";
 
             var tokenCount = tokenizerService.CountTokens(text);
             if (tokenCount > tokensAvailable)
@@ -68,7 +67,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
                 break;
             }
 
-            prompt.AppendLine(text);
+            prompt.Append(text);
 
             tokensAvailable -= tokenCount;
             if (tokensAvailable <= 0)

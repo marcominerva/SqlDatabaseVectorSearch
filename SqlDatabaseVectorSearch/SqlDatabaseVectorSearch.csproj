@@ -13,6 +13,7 @@
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.10" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
         <PackageReference Include="Microsoft.ML.Tokenizers" Version="0.22.0-preview.24526.1" />
+        <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="0.22.0-preview.24526.1" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="0.22.0-preview.24526.1" />
         <PackageReference Include="Microsoft.SemanticKernel" Version="1.27.0" />
 		<PackageReference Include="MinimalHelpers.OpenApi" Version="2.0.17" />
