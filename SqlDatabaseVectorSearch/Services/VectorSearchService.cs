@@ -9,7 +9,6 @@ using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
-using TinyHelpers.Extensions;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
@@ -45,7 +44,7 @@ public class VectorSearchService(SqlConnection sqlConnection, ITextEmbeddingGene
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
         // Save the document chunks and the corresponding embedding in the database.
-        foreach (var (paragraph, index) in paragraphs.WithIndex())
+        foreach (var (index, paragraph) in paragraphs.Index())
         {
             await sqlConnection.ExecuteAsync($"""
                 INSERT INTO DocumentChunks (DocumentId, [Index], Content, Embedding)
