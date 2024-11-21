@@ -70,6 +70,7 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         }
 
         prompt.AppendLine($"""
+
             =====
             Answer the following question:
             ---
