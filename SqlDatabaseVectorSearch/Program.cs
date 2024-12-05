@@ -22,6 +22,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
+    options.EnableRetryOnFailure();
 }, options =>
 {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
