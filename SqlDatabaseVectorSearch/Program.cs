@@ -1,14 +1,13 @@
+using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
 using Microsoft.SemanticKernel;
-using MinimalHelpers.OpenApi;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 using TinyHelpers.AspNetCore.Extensions;
-using TinyHelpers.AspNetCore.Swagger;
+using TinyHelpers.AspNetCore.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
@@ -22,13 +21,18 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
-    options.EnableRetryOnFailure();
 }, options =>
 {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
-builder.Services.AddMemoryCache();
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions = new()
+    {
+        LocalCacheExpiration = appSettings.MessageExpiration
+    };
+});
 
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
@@ -40,11 +44,8 @@ builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddOpenApi(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo { Title = "SQL Database Vector Search API", Version = "v1" });
-
     options.AddDefaultResponse();
 });
 
@@ -61,11 +62,11 @@ app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
+    app.MapOpenApi();
     app.UseSwaggerUI(options =>
     {
         options.RoutePrefix = string.Empty;
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "SQL Database Vector Search API v1");
+        options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
     });
 }
 
@@ -76,24 +77,15 @@ documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchSe
     var documents = await vectorSearchService.GetDocumentsAsync();
     return TypedResults.Ok(documents);
 })
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Gets the list of documents";
-    return operation;
-});
+.WithSummary("Gets the list of documents");
 
 documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {
     var documents = await vectorSearchService.GetDocumentChunksAsync(documentId);
     return TypedResults.Ok(documents);
 })
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Gets the list of chunks of a given document";
-    operation.Description = "The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.";
-
-    return operation;
-});
+.WithSummary("Gets the list of chunks of a given document")
+.WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
 
 documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, VectorSearchService vectorSearchService) =>
 {
@@ -105,13 +97,11 @@ documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", asyn
 
     return TypedResults.Ok(chunk);
 })
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Gets the details of a given chunk, includings its embedding";
-    return operation;
-});
+.ProducesProblem(StatusCodes.Status404NotFound)
+.WithSummary("Gets the details of a given chunk, includings its embedding");
 
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, Guid? documentId = null) =>
+documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService,
+    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
     documentId = await vectorSearchService.ImportAsync(stream, file.FileName, documentId);
@@ -119,43 +109,26 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
     return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
 })
 .DisableAntiforgery()
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Uploads a document";
-    operation.Description = "Uploads a document to SQL Database and saves its embedding using the new native Vector type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.";
-
-    operation.Parameter("documentId").Description = "The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.";
-
-    return operation;
-});
+.ProducesProblem(StatusCodes.Status400BadRequest)
+.WithSummary("Uploads a document")
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the new native Vector type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.");
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {
     await vectorSearchService.DeleteDocumentAsync(documentId);
     return TypedResults.NoContent();
 })
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Deletes a document";
-    operation.Description = "This endpoint deletes the document and all its chunks.";
+.WithSummary("Deletes a document")
+.WithDescription("This endpoint deletes the document and all its chunks.");
 
-    return operation;
-});
-
-app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, bool reformulate = true) =>
+app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
+    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
     var response = await vectorSearchService.AskQuestionAsync(question, reformulate);
     return TypedResults.Ok(response);
 })
-.WithOpenApi(operation =>
-{
-    operation.Summary = "Asks a question";
-    operation.Description = "The question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
-
-    operation.Parameter("reformulate").Description = "If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.";
-
-    return operation;
-})
+.WithSummary("Asks a question")
+.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
 .WithTags("Ask");
 
 app.Run();
