@@ -1,24 +1,20 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using OpenAI.Chat;
 using SqlDatabaseVectorSearch.Models;
-using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class ChatService(IMemoryCache cache, IChatCompletionService chatCompletionService, IOptions<AppSettings> appSettingsOptions)
+public class ChatService(IChatCompletionService chatCompletionService, HybridCache cache)
 {
     private static readonly JsonSerializerOptions jsonSerializerOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly AppSettings appSettings = appSettingsOptions.Value;
-
     public async Task<string> CreateQuestionAsync(Guid conversationId, string question)
     {
-        var chat = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
+        var chat = await GetChatHistoryAsync(conversationId);
 
         var embeddingQuestion = $"""
             Reformulate the following question taking into account the context of the chat to perform embeddings search:
@@ -83,23 +79,33 @@ public class ChatService(IMemoryCache cache, IChatCompletionService chatCompleti
         var response = JsonSerializer.Deserialize<ChatResponse>(responseJson.Content!, jsonSerializerOptions)!;
 
         // Add question and answer to the chat history.
-        var history = new ChatHistory(cache.Get<ChatHistory?>(conversationId) ?? []);
-        history.AddUserMessage(question);
-        history.AddAssistantMessage(response.Answer);
-
-        await UpdateCacheAsync(conversationId, history);
+        await SetChatHistoryAsync(conversationId, question, response.Answer);
 
         return response;
     }
 
-    private Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)
-    {
-        if (chat.Count > appSettings.MessageLimit)
-        {
-            chat = new ChatHistory(chat.TakeLast(appSettings.MessageLimit));
-        }
+    private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)
+        => await cache.SetAsync(conversationId.ToString(), chat);
 
-        cache.Set(conversationId, chat, appSettings.MessageExpiration);
-        return Task.CompletedTask;
+    private async Task<ChatHistory> GetChatHistoryAsync(Guid conversationId)
+    {
+        var historyCache = await cache.GetOrCreateAsync(conversationId.ToString(),
+        (cancellationToken) =>
+        {
+            return ValueTask.FromResult<ChatHistory>([]);
+        });
+
+        var chat = new ChatHistory(historyCache);
+        return chat;
+    }
+
+    private async Task SetChatHistoryAsync(Guid conversationId, string question, string answer)
+    {
+        var history = await GetChatHistoryAsync(conversationId);
+
+        history.AddUserMessage(question);
+        history.AddAssistantMessage(answer);
+
+        await UpdateCacheAsync(conversationId, history);
     }
 }
