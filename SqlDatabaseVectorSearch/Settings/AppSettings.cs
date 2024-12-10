@@ -10,7 +10,5 @@ public class AppSettings
 
     public int MaxRelevantChunks { get; init; } = 5;
 
-    public int MessageLimit { get; init; }
-
     public TimeSpan MessageExpiration { get; init; }
 }
