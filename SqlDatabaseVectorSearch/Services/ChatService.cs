@@ -9,6 +9,8 @@ namespace SqlDatabaseVectorSearch.Services;
 
 public class ChatService(IChatCompletionService chatCompletionService, TokenizerService tokenizerService, HybridCache cache, IOptions<AppSettings> appSettingsOptions)
 {
+    private readonly AppSettings appSettings = appSettingsOptions.Value;
+
     public async Task<string> CreateQuestionAsync(Guid conversationId, string question)
     {
         var chat = await GetChatHistoryAsync(conversationId);
@@ -62,7 +64,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             var tokenCount = tokenizerService.CountTokens(text);
             if (tokenCount > tokensAvailable)
             {
-                // There isn't enough space to add the text.
+                // There isn't enough space to add the chunks.
                 break;
             }
 
