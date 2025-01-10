@@ -53,7 +53,8 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             """);
 
         var tokensAvailable = appSettings.MaxInputTokens
-                              - tokenizerService.CountTokens(chat[0].ToString()) - tokenizerService.CountTokens(prompt.ToString())
+                              - tokenizerService.CountTokens(chat[0].ToString())    // System prompt.
+                              - tokenizerService.CountTokens(prompt.ToString()) // Initial user prompt.
                               - appSettings.MaxOutputTokens;    // To ensure there is enough space for the answer.
 
         foreach (var chunk in chunks)
