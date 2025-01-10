@@ -10,5 +10,9 @@ public class AppSettings
 
     public int MaxRelevantChunks { get; init; } = 5;
 
+    public int MaxInputTokens { get; init; } = 16385;
+
+    public int MaxOutputTokens { get; init; } = 800;
+
     public TimeSpan MessageExpiration { get; init; }
 }

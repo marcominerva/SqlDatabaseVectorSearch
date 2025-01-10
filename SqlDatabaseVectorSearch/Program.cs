@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
-var aiSettings = builder.Configuration.GetSection<AzureOpenAISettings>("AzureOpenAI")!;
+var aiSettings = builder.Services.ConfigureAndGet<AzureOpenAISettings>(builder.Configuration, "AzureOpenAI")!;
 var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
 
 builder.Services.AddSingleton(TimeProvider.System);
@@ -40,6 +40,7 @@ builder.Services.AddKernel()
     .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
+builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
 

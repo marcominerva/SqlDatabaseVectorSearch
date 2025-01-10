@@ -1,10 +1,13 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class ChatService(IChatCompletionService chatCompletionService, HybridCache cache)
+public class ChatService(IChatCompletionService chatCompletionService, TokenizerService tokenizerService, HybridCache cache, IOptions<AppSettings> appSettingsOptions)
 {
     public async Task<string> CreateQuestionAsync(Guid conversationId, string question)
     {
@@ -38,29 +41,47 @@ public class ChatService(IChatCompletionService chatCompletionService, HybridCac
             You must answer in the same language of the user's question.
             """);
 
-        var prompt = new StringBuilder("""
+        var prompt = new StringBuilder($"""
+            Answer the following question:
+            ---
+            {question}
+            =====          
             Using the following information:
 
             """);
 
-        // TODO: Ensure that chunks are not too long, according to the model max token.
-        foreach (var text in chunks)
+        var tokensAvailable = appSettings.MaxInputTokens
+                              - tokenizerService.CountTokens(chat[0].ToString())    // System prompt.
+                              - tokenizerService.CountTokens(prompt.ToString()) // Initial user prompt.
+                              - appSettings.MaxOutputTokens;    // To ensure there is enough space for the answer.
+
+        foreach (var chunk in chunks)
         {
-            prompt.AppendLine("---");
+            var text = $"---{Environment.NewLine}{chunk}";
+
+            var tokenCount = tokenizerService.CountTokens(text);
+            if (tokenCount > tokensAvailable)
+            {
+                // There isn't enough space to add the text.
+                break;
+            }
+
             prompt.Append(text);
+
+            tokensAvailable -= tokenCount;
+            if (tokensAvailable <= 0)
+            {
+                // There isn't enough space to add more chunks.
+                break;
+            }
         }
-
-        prompt.AppendLine($"""
-
-            =====
-            Answer the following question:
-            ---
-            {question}
-            """);
 
         chat.AddUserMessage(prompt.ToString());
 
-        var answer = await chatCompletionService.GetChatMessageContentAsync(chat)!;
+        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = appSettings.MaxOutputTokens
+        });
 
         // Add question and answer to the chat history.
         await SetChatHistoryAsync(conversationId, question, answer.Content!);
