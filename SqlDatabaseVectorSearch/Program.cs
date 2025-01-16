@@ -47,6 +47,7 @@ builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddOpenApi(options =>
 {
     options.AddDefaultResponse();
+    options.RemoveServerList();
 });
 
 builder.Services.AddDefaultProblemDetails();
@@ -60,15 +61,12 @@ app.UseHttpsRedirection();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-if (app.Environment.IsDevelopment())
+app.MapOpenApi();
+app.UseSwaggerUI(options =>
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(options =>
-    {
-        options.RoutePrefix = string.Empty;
-        options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
-    });
-}
+    options.RoutePrefix = string.Empty;
+    options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
+});
 
 var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
 
