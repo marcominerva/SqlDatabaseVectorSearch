@@ -4,7 +4,7 @@ public class AppSettings
 {
     public int MaxTokensPerLine { get; init; } = 300;
 
-    public int MaxTokensPerParagraph { get; init; } = 1024;
+    public int MaxTokensPerParagraph { get; init; } = 1000;
 
     public int OverlapTokens { get; init; } = 100;
 

@@ -34,6 +34,11 @@ builder.Services.AddHybridCache(options =>
     };
 });
 
+builder.Services.ConfigureHttpClientDefaults(builder =>
+{
+    builder.AddStandardResilienceHandler();
+});
+
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
 builder.Services.AddKernel()
@@ -46,8 +51,8 @@ builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddOpenApi(options =>
 {
-    options.AddDefaultResponse();
     options.RemoveServerList();
+    options.AddDefaultResponse();
 });
 
 builder.Services.AddDefaultProblemDetails();
