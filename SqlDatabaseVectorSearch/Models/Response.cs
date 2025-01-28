@@ -1,10 +1,4 @@
 ﻿namespace SqlDatabaseVectorSearch.Models;
 
-public record class Response(string Question, string Answer, StreamState? StreamState = null);
-
-public enum StreamState
-{
-    Start,
-    Append,
-    End
-}
+// Question and Asnwer can be null when using response streaming.
+public record class Response(string? Question, string? Answer, StreamState? StreamState = null);
