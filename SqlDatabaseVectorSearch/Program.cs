@@ -151,7 +151,6 @@ app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vector
         await foreach (var delta in responseStream)
         {
             yield return delta;
-            await Task.Delay(50);
         }
     }
 
