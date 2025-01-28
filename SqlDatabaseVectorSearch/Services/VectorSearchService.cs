@@ -13,7 +13,7 @@ using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions)
+public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TokenizerService tokenizerService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -34,12 +34,15 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
         dbContext.Documents.Add(document);
 
         // Split the content into chunks and generate the embeddings for each one.
-        var paragraphs = TextChunker.SplitPlainTextParagraphs(TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine), appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens);
+        var lines = TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine, tokenizerService.CountTokens);
+        var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountTokens);
         var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
         // Save the document chunks and the corresponding embedding in the database.
         foreach (var (index, paragraph) in paragraphs.Index())
         {
+            logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountTokens(paragraph));
+
             var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
             dbContext.DocumentChunks.Add(documentChunk);
         }

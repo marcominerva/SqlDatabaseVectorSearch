@@ -100,7 +100,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             var tokenCount = tokenizerService.CountTokens(text);
             if (tokenCount > tokensAvailable)
             {
-                // There isn't enough space to add the chunks.
+                // There isn't enough space to add the current chunk.
                 break;
             }
 
