@@ -36,6 +36,42 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
     public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
+        var chat = CreateChatAsync(chunks, question);
+
+        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = appSettings.MaxOutputTokens
+        });
+
+        // Add question and answer to the chat history.
+        await SetChatHistoryAsync(conversationId, question, answer.Content!);
+
+        return answer.Content!;
+    }
+
+    public async IAsyncEnumerable<string> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question)
+    {
+        var chat = CreateChatAsync(chunks, question);
+
+        var answer = new StringBuilder();
+        await foreach (var token in chatCompletionService.GetStreamingChatMessageContentsAsync(chat, new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = appSettings.MaxOutputTokens
+        }))
+        {
+            if (!string.IsNullOrEmpty(token.Content))
+            {
+                yield return token.Content;
+                answer.Append(token.Content);
+            }
+        }
+
+        // Add question and answer to the chat history.
+        await SetChatHistoryAsync(conversationId, question, answer.ToString());
+    }
+
+    private ChatHistory CreateChatAsync(IEnumerable<string> chunks, string question)
+    {
         var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
             For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
@@ -79,16 +115,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         }
 
         chat.AddUserMessage(prompt.ToString());
-
-        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = appSettings.MaxOutputTokens
-        });
-
-        // Add question and answer to the chat history.
-        await SetChatHistoryAsync(conversationId, question, answer.Content!);
-
-        return answer.Content!;
+        return chat;
     }
 
     private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)

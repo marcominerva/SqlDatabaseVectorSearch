@@ -82,6 +82,33 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
 
     public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true)
     {
+        var (reformulatedQuestion, chunks) = await CreateContextAsync(question, reformulate);
+
+        var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
+        return new Response(reformulatedQuestion, answer);
+    }
+
+    public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true)
+    {
+        var (reformulatedQuestion, chunks) = await CreateContextAsync(question, reformulate);
+
+        var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion);
+
+        // The first message contains the original question.
+        yield return new Response(reformulatedQuestion, null, StreamState.Start);
+
+        // Return each token as a partial response.
+        await foreach (var token in answerStream)
+        {
+            yield return new Response(null, token, StreamState.Append);
+        }
+
+        // The last message tells the client that the stream has ended.
+        yield return new Response(null, null, StreamState.End);
+    }
+
+    private async Task<(string Question, IEnumerable<string> Chunks)> CreateContextAsync(Question question, bool reformulate = true)
+    {
         // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
         var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;
 
@@ -94,8 +121,7 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
                     .Take(appSettings.MaxRelevantChunks)
                     .ToListAsync();
 
-        var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
-        return new Response(reformulatedQuestion, answer);
+        return (reformulatedQuestion, chunks);
     }
 
     private static Task<string> GetContentAsync(Stream stream)

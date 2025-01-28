@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
@@ -48,6 +49,11 @@ builder.Services.AddKernel()
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 builder.Services.AddOpenApi(options =>
 {
@@ -114,7 +120,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .DisableAntiforgery()
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the new native Vector type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.");
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.");
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {
@@ -131,6 +137,26 @@ app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSear
     return TypedResults.Ok(response);
 })
 .WithSummary("Asks a question")
+.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
+.WithTags("Ask");
+
+app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
+    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
+{
+    async IAsyncEnumerable<Response> Stream()
+    {
+        // Requests a streaming response.
+        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);
+
+        await foreach (var delta in responseStream)
+        {
+            yield return delta;
+        }
+    }
+
+    return Stream();
+})
+.WithSummary("Asks a question and gets the response as streaming")
 .WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
 .WithTags("Ask");
 
