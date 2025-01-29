@@ -18,7 +18,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
     public async Task<Guid> ImportAsync(Stream stream, string name, string contentType, Guid? documentId)
     {
         // Extract the contents of the file.
-        var decoder = serviceProvider.GetRequiredKeyedService<IContentDecoder>(contentType);
+        var decoder = serviceProvider.GetKeyedService<IContentDecoder>(contentType) ?? throw new NotSupportedException($"Content type '{contentType}' is not supported.");
         var content = await decoder.DecodeAsync(stream, contentType);
 
         await dbContext.Database.BeginTransactionAsync();

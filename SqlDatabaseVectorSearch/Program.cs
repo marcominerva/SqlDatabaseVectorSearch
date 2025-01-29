@@ -54,6 +54,7 @@ builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -74,7 +75,15 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
 
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    StatusCodeSelector = exception => exception switch
+    {
+        NotSupportedException => StatusCodes.Status501NotImplemented,
+        _ => StatusCodes.Status500InternalServerError
+    }
+});
+
 app.UseStatusCodePages();
 
 app.MapOpenApi();
@@ -125,7 +134,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .DisableAntiforgery()
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.");
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {

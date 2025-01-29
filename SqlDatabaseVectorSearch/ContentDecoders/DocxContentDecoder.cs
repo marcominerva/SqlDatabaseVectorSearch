@@ -21,41 +21,5 @@ public class DocxContentDecoder : IContentDecoder
         }
 
         return Task.FromResult(content.ToString());
-
-        //foreach (var paragraph in body!.Elements<Paragraph>())
-        //{
-        //    foreach (var element in paragraph.Elements())
-        //    {
-        //        if (element is Run run)
-        //        {
-        //            DecodeTextFromRun(run);
-        //        }
-        //        else if (element is Hyperlink hyperlink)
-        //        {
-        //            foreach (var hyperlinkRun in hyperlink.Elements<Run>())
-        //            {
-        //                DecodeTextFromRun(hyperlinkRun);
-        //            }
-
-        //            //var hyperlinkUri = doc.MainDocumentPart.HyperlinkRelationships.FirstOrDefault(r => r.Id == hyperlink.Id)?.Uri;
-        //            //if (hyperlinkUri is not null)
-        //            //{
-        //            //    content.Append($" ({hyperlinkUri})");
-        //            //}
-        //        }
-        //    }
-
-        //    content.AppendLine(); // Preserve whitespace and blank lines.
-        //}
-
-        //return Task.FromResult(content.ToString());
-
-        //void DecodeTextFromRun(Run run)
-        //{
-        //    foreach (var text in run.Elements<Text>())
-        //    {
-        //        content.Append(text.Text);
-        //    }
-        //}
     }
 }
