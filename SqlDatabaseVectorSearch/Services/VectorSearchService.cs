@@ -1,26 +1,25 @@
 ﻿using System.Data;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.Text;
+using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
-using UglyToad.PdfPig;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TokenizerService tokenizerService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TokenizerService tokenizerService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
-    public async Task<Guid> ImportAsync(Stream stream, string name, Guid? documentId)
+    public async Task<Guid> ImportAsync(Stream stream, string name, string contentType, Guid? documentId)
     {
-        // Extract the contents of the file (currently, only PDF files are supported).
-        var content = await GetContentAsync(stream);
+        // Extract the contents of the file.
+        var decoder = serviceProvider.GetRequiredKeyedService<IContentDecoder>(contentType);
+        var content = await decoder.DecodeAsync(stream, contentType);
 
         await dbContext.Database.BeginTransactionAsync();
 
@@ -125,21 +124,5 @@ public class VectorSearchService(ApplicationDbContext dbContext, ITextEmbeddingG
                     .ToListAsync();
 
         return (reformulatedQuestion, chunks);
-    }
-
-    private static Task<string> GetContentAsync(Stream stream)
-    {
-        var content = new StringBuilder();
-
-        // Read the content of the PDF document.
-        using var pdfDocument = PdfDocument.Open(stream);
-
-        foreach (var page in pdfDocument.GetPages().Where(x => x is not null))
-        {
-            var pageContent = ContentOrderTextExtractor.GetText(page) ?? string.Empty;
-            content.AppendLine(pageContent);
-        }
-
-        return Task.FromResult(content.ToString());
     }
 }

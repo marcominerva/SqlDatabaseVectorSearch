@@ -1,8 +1,10 @@
 using System.ComponentModel;
+using System.Net.Mime;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
+using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
@@ -49,6 +51,9 @@ builder.Services.AddKernel()
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
+
+builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
+builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -113,7 +118,7 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
     [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
-    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, documentId);
+    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
 
     return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
 })
