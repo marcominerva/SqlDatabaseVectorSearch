@@ -1,8 +1,10 @@
 using System.ComponentModel;
+using System.Net.Mime;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
+using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
@@ -50,6 +52,10 @@ builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();
 
+builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
+builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
+
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -69,7 +75,15 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
 
-app.UseExceptionHandler();
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    StatusCodeSelector = exception => exception switch
+    {
+        NotSupportedException => StatusCodes.Status501NotImplemented,
+        _ => StatusCodes.Status500InternalServerError
+    }
+});
+
 app.UseStatusCodePages();
 
 app.MapOpenApi();
@@ -113,14 +127,14 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
     [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
-    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, documentId);
+    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
 
     return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
 })
 .DisableAntiforgery()
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, only PDF files are supported.");
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
 {
