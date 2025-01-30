@@ -19,6 +19,11 @@ builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, relo
 var aiSettings = builder.Services.ConfigureAndGet<AzureOpenAISettings>(builder.Configuration, "AzureOpenAI")!;
 var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
@@ -55,11 +60,6 @@ builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-});
 
 builder.Services.AddOpenApi(options =>
 {
@@ -127,9 +127,9 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
     [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
-    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
+    var response = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
 
-    return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
+    return TypedResults.Ok(response);
 })
 .DisableAntiforgery()
 .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -157,7 +157,7 @@ app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSear
 app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
-    async IAsyncEnumerable<Response> Stream()
+    async IAsyncEnumerable<QuestionResponse> Stream()
     {
         // Requests a streaming response.
         var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);

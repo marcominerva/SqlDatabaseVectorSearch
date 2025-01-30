@@ -3,6 +3,8 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
+using OpenAI.Chat;
+using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
@@ -11,7 +13,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
-    public async Task<string> CreateQuestionAsync(Guid conversationId, string question)
+    public async Task<ChatResponse> CreateQuestionAsync(Guid conversationId, string question)
     {
         var chat = await GetChatHistoryAsync(conversationId);
 
@@ -31,10 +33,12 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
         await UpdateCacheAsync(conversationId, chat);
 
-        return reformulatedQuestion.Content!;
+        var tokenUsage = GetTokenUsage(reformulatedQuestion);
+
+        return new(reformulatedQuestion.Content!, tokenUsage);
     }
 
-    public async Task<string> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
+    public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
         var chat = CreateChatAsync(chunks, question);
 
@@ -46,10 +50,12 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         // Add question and answer to the chat history.
         await SetChatHistoryAsync(conversationId, question, answer.Content!);
 
-        return answer.Content!;
+        var tokenUsage = GetTokenUsage(answer);
+
+        return new(answer.Content!, tokenUsage);
     }
 
-    public async IAsyncEnumerable<string> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question)
+    public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question)
     {
         var chat = CreateChatAsync(chunks, question);
 
@@ -61,13 +67,42 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         {
             if (!string.IsNullOrEmpty(token.Content))
             {
-                yield return token.Content;
+                yield return new(token.Content);
                 answer.Append(token.Content);
+            }
+            else if (token.Content is null)
+            {
+                // Token usage is returned in the last message, when the Content is null.
+                var tokenUsage = GetTokenUsage(token);
+                if (tokenUsage is not null)
+                {
+                    yield return new(null, tokenUsage);
+                }
             }
         }
 
         // Add question and answer to the chat history.
         await SetChatHistoryAsync(conversationId, question, answer.ToString());
+    }
+
+    private static TokenUsage? GetTokenUsage(Microsoft.SemanticKernel.ChatMessageContent message)
+    {
+        if (message.InnerContent is ChatCompletion content && content.Usage is not null)
+        {
+            return new(content.Usage.InputTokenCount, content.Usage.OutputTokenCount);
+        }
+
+        return null;
+    }
+
+    private static TokenUsage? GetTokenUsage(Microsoft.SemanticKernel.StreamingChatMessageContent message)
+    {
+        if (message.InnerContent is StreamingChatCompletionUpdate content && content.Usage is not null)
+        {
+            return new(content.Usage.InputTokenCount, content.Usage.OutputTokenCount);
+        }
+
+        return null;
     }
 
     private ChatHistory CreateChatAsync(IEnumerable<string> chunks, string question)
