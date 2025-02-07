@@ -109,55 +109,6 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
     "streamState": "Append",
     "tokenUsage": null
   },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " because",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " of",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " its",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " characteristic",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " red",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " color",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": ",",
-    "streamState": "Append",
-    "tokenUsage": null
-  },
   //...
   {
     "originalQuestion": null,
@@ -185,7 +136,7 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
 ```
 
 - The first piece of the response has the following characteristics:
-  - the *streamState* tag is set to `Start`,
+  - the *streamState* property is set to `Start`,
   - it contains the question and its reformulation (if not requested, *reformulatedQuestion* will be equals to *originalQuestion*)
   - the *tokenUsage* section holds information about token used for reformulation (if done) and for the embedding of the question
 - Then, there are as many elements for the actual answer as necessary:
