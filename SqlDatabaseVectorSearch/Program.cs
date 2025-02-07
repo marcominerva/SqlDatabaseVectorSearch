@@ -53,6 +53,7 @@ builder.Services.AddKernel()
     .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
+builder.Services.AddSingleton<TextChunkerService>();
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddScoped<VectorSearchService>();

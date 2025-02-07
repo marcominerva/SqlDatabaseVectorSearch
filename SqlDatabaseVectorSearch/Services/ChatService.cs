@@ -22,7 +22,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             ---
             {question}
             ---
-            You must reformulate the question in the same language of the user's question.
+            You must reformulate the question in the same language of the user's question. For example, it the user asks a question in English, the answer must be in English.
             Never add "in this chat", "in the context of this chat", "in the context of our conversation", "search for" or something like that in your answer.
             """;
 
@@ -111,7 +111,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
             For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
             Never answer to questions that are not related to this chat.
-            You must answer in the same language of the user's question.
+            You must answer in the same language of the user's question. For example, it the user asks a question in English, the answer must be in English.
             """);
 
         var prompt = new StringBuilder($"""
@@ -124,15 +124,15 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             """);
 
         var tokensAvailable = appSettings.MaxInputTokens
-                              - tokenizerService.CountTokens(chat[0].ToString())    // System prompt.
-                              - tokenizerService.CountTokens(prompt.ToString()) // Initial user prompt.
+                              - tokenizerService.CountChatCompletionTokens(chat[0].ToString())    // System prompt.
+                              - tokenizerService.CountChatCompletionTokens(prompt.ToString()) // Initial user prompt.
                               - appSettings.MaxOutputTokens;    // To ensure there is enough space for the answer.
 
         foreach (var chunk in chunks)
         {
             var text = $"---{Environment.NewLine}{chunk}";
 
-            var tokenCount = tokenizerService.CountTokens(text);
+            var tokenCount = tokenizerService.CountChatCompletionTokens(text);
             if (tokenCount > tokensAvailable)
             {
                 // There isn't enough space to add the current chunk.

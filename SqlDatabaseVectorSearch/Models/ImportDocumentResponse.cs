@@ -1,3 +1,3 @@
 ﻿namespace SqlDatabaseVectorSearch.Models;
 
-public record class ImportDocumentResponse(Guid DocumentId, int TotalTokenCount);
+public record class ImportDocumentResponse(Guid DocumentId, int EmbeddingTokenCount);
