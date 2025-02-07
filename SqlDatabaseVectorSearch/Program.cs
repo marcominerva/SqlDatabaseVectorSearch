@@ -26,7 +26,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
+builder.Services.AddAzureSql<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
 }, options =>
@@ -56,7 +56,9 @@ builder.Services.AddKernel()
 builder.Services.AddSingleton<TextChunkerService>();
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
+
 builder.Services.AddScoped<VectorSearchService>();
+builder.Services.AddScoped<DocumentService>();
 
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
@@ -96,24 +98,24 @@ app.UseSwaggerUI(options =>
 
 var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
 
-documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchService) =>
+documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService) =>
 {
-    var documents = await vectorSearchService.GetDocumentsAsync();
+    var documents = await documentService.GetDocumentsAsync();
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of documents");
 
-documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, VectorSearchService vectorSearchService) =>
+documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService) =>
 {
-    var documents = await vectorSearchService.GetDocumentChunksAsync(documentId);
+    var documents = await documentService.GetDocumentChunksAsync(documentId);
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of chunks of a given document")
 .WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
 
-documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, VectorSearchService vectorSearchService) =>
+documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService) =>
 {
-    var chunk = await vectorSearchService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
+    var chunk = await documentService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
     if (chunk is null)
     {
         return TypedResults.NotFound();
@@ -123,6 +125,14 @@ documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", asyn
 })
 .ProducesProblem(StatusCodes.Status404NotFound)
 .WithSummary("Gets the details of a given chunk, includings its embedding");
+
+documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService) =>
+{
+    await documentService.DeleteDocumentAsync(documentId);
+    return TypedResults.NoContent();
+})
+.WithSummary("Deletes a document")
+.WithDescription("This endpoint deletes the document and all its chunks.");
 
 documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService,
     [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
@@ -136,14 +146,6 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .WithSummary("Uploads a document")
 .WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
-
-documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
-{
-    await vectorSearchService.DeleteDocumentAsync(documentId);
-    return TypedResults.NoContent();
-})
-.WithSummary("Deletes a document")
-.WithDescription("This endpoint deletes the document and all its chunks.");
 
 app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>

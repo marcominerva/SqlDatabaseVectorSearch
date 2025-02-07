@@ -10,7 +10,7 @@ using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, TextChunkerService textChunkerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, TextChunkerService textChunkerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -23,65 +23,41 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
         var tokenCount = tokenizerService.CountEmbeddingTokens(content);
 
-        await dbContext.Database.BeginTransactionAsync();
-
-        if (documentId.HasValue)
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        var document = await strategy.ExecuteAsync(async () =>
         {
-            // If the user is importing a document that already exists, delete the previous one.
-            await DeleteDocumentAsync(documentId.Value);
-        }
+            await dbContext.Database.BeginTransactionAsync();
 
-        var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
-        dbContext.Documents.Add(document);
+            if (documentId.HasValue)
+            {
+                // If the user is importing a document that already exists, delete the previous one.
+                await documentService.DeleteDocumentAsync(documentId.Value);
+            }
 
-        // Split the content into chunks and generate the embeddings for each one.
-        var paragraphs = textChunkerService.Split(content);
-        var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
+            var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
+            dbContext.Documents.Add(document);
 
-        // Save the document chunks and the corresponding embedding in the database.
-        foreach (var (index, paragraph) in paragraphs.Index())
-        {
-            logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
+            // Split the content into chunks and generate the embeddings for each one.
+            var paragraphs = textChunkerService.Split(content);
+            var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
-            var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
-            dbContext.DocumentChunks.Add(documentChunk);
-        }
+            // Save the document chunks and the corresponding embedding in the database.
+            foreach (var (index, paragraph) in paragraphs.Index())
+            {
+                logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
 
-        await dbContext.SaveChangesAsync();
-        await dbContext.Database.CommitTransactionAsync();
+                var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
+                dbContext.DocumentChunks.Add(documentChunk);
+            }
+
+            await dbContext.SaveChangesAsync();
+            await dbContext.Database.CommitTransactionAsync();
+
+            return document;
+        });
 
         return new(document.Id, tokenCount);
     }
-
-    public async Task<IEnumerable<Document>> GetDocumentsAsync()
-    {
-        var documents = await dbContext.Documents.OrderBy(d => d.Name)
-            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.Chunks.Count))
-            .ToListAsync();
-
-        return documents;
-    }
-
-    public async Task<IEnumerable<DocumentChunk>> GetDocumentChunksAsync(Guid documentId)
-    {
-        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, null))
-            .ToListAsync();
-
-        return documentChunks;
-    }
-
-    public async Task<DocumentChunk?> GetDocumentChunkEmbeddingAsync(Guid documentId, Guid documentChunkId)
-    {
-        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.Embedding))
-            .FirstOrDefaultAsync();
-
-        return documentChunk;
-    }
-
-    public Task DeleteDocumentAsync(Guid documentId)
-            => dbContext.Documents.Where(d => d.Id == documentId).ExecuteDeleteAsync();
 
     public async Task<QuestionResponse> AskQuestionAsync(Question question, bool reformulate = true)
     {
