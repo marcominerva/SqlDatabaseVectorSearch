@@ -96,6 +96,36 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
 });
 
+app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
+    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
+{
+    var response = await vectorSearchService.AskQuestionAsync(question, reformulate);
+    return TypedResults.Ok(response);
+})
+.WithSummary("Asks a question")
+.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
+.WithTags("Ask");
+
+app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
+    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
+{
+    async IAsyncEnumerable<QuestionResponse> Stream()
+    {
+        // Requests a streaming response.
+        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);
+
+        await foreach (var delta in responseStream)
+        {
+            yield return delta;
+        }
+    }
+
+    return Stream();
+})
+.WithSummary("Asks a question and gets the response as streaming")
+.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
+.WithTags("Ask");
+
 var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
 
 documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService) =>
@@ -146,35 +176,5 @@ documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchServi
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .WithSummary("Uploads a document")
 .WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
-
-app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
-    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
-{
-    var response = await vectorSearchService.AskQuestionAsync(question, reformulate);
-    return TypedResults.Ok(response);
-})
-.WithSummary("Asks a question")
-.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
-.WithTags("Ask");
-
-app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
-    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
-{
-    async IAsyncEnumerable<QuestionResponse> Stream()
-    {
-        // Requests a streaming response.
-        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);
-
-        await foreach (var delta in responseStream)
-        {
-            yield return delta;
-        }
-    }
-
-    return Stream();
-})
-.WithSummary("Asks a question and gets the response as streaming")
-.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
-.WithTags("Ask");
 
 app.Run();
