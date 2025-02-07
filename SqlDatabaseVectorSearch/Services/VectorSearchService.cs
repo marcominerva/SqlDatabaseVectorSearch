@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
-using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
@@ -11,111 +10,100 @@ using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, ITextEmbeddingGenerationService textEmbeddingGenerationService, ChatService chatService, TokenizerService tokenizerService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, TextChunkerService textChunkerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
-    public async Task<Guid> ImportAsync(Stream stream, string name, string contentType, Guid? documentId)
+    public async Task<ImportDocumentResponse> ImportAsync(Stream stream, string name, string contentType, Guid? documentId)
     {
         // Extract the contents of the file.
         var decoder = serviceProvider.GetKeyedService<IContentDecoder>(contentType) ?? throw new NotSupportedException($"Content type '{contentType}' is not supported.");
         var content = await decoder.DecodeAsync(stream, contentType);
 
-        await dbContext.Database.BeginTransactionAsync();
+        // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
+        var tokenCount = tokenizerService.CountEmbeddingTokens(content);
 
-        if (documentId.HasValue)
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        var document = await strategy.ExecuteAsync(async () =>
         {
-            // If the user is importing a document that already exists, delete the previous one.
-            await DeleteDocumentAsync(documentId.Value);
-        }
+            await dbContext.Database.BeginTransactionAsync();
 
-        var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
-        dbContext.Documents.Add(document);
+            if (documentId.HasValue)
+            {
+                // If the user is importing a document that already exists, delete the previous one.
+                await documentService.DeleteDocumentAsync(documentId.Value);
+            }
 
-        // Split the content into chunks and generate the embeddings for each one.
-        var lines = TextChunker.SplitPlainTextLines(content, appSettings.MaxTokensPerLine, tokenizerService.CountTokens);
-        var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountTokens);
-        var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
+            var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
+            dbContext.Documents.Add(document);
 
-        // Save the document chunks and the corresponding embedding in the database.
-        foreach (var (index, paragraph) in paragraphs.Index())
-        {
-            logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountTokens(paragraph));
+            // Split the content into chunks and generate the embeddings for each one.
+            var paragraphs = textChunkerService.Split(content);
+            var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs);
 
-            var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
-            dbContext.DocumentChunks.Add(documentChunk);
-        }
+            // Save the document chunks and the corresponding embedding in the database.
+            foreach (var (index, paragraph) in paragraphs.Index())
+            {
+                logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
 
-        await dbContext.SaveChangesAsync();
-        await dbContext.Database.CommitTransactionAsync();
+                var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
+                dbContext.DocumentChunks.Add(documentChunk);
+            }
 
-        return document.Id;
+            await dbContext.SaveChangesAsync();
+            await dbContext.Database.CommitTransactionAsync();
+
+            return document;
+        });
+
+        return new(document.Id, tokenCount);
     }
 
-    public async Task<IEnumerable<Document>> GetDocumentsAsync()
+    public async Task<QuestionResponse> AskQuestionAsync(Question question, bool reformulate = true)
     {
-        var documents = await dbContext.Documents.OrderBy(d => d.Name)
-            .Select(d => new Document(d.Id, d.Name, d.CreationDate, d.Chunks.Count))
-            .ToListAsync();
+        // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
+        var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate);
 
-        return documents;
+        var (answer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!);
+
+        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage));
     }
 
-    public async Task<IEnumerable<DocumentChunk>> GetDocumentChunksAsync(Guid documentId)
+    public async IAsyncEnumerable<QuestionResponse> AskStreamingAsync(Question question, bool reformulate = true)
     {
-        var documentChunks = await dbContext.DocumentChunks.Where(c => c.DocumentId == documentId).OrderBy(c => c.Index)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, null))
-            .ToListAsync();
+        // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
+        var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate);
 
-        return documentChunks;
-    }
+        var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion.Text!);
 
-    public async Task<DocumentChunk?> GetDocumentChunkEmbeddingAsync(Guid documentId, Guid documentChunkId)
-    {
-        var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.Embedding))
-            .FirstOrDefaultAsync();
+        // The first message contains the question and the corresponding token usage (if reformulated).
+        yield return new(question.Text, reformulatedQuestion.Text!, null, StreamState.Start, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null));
 
-        return documentChunk;
-    }
-
-    public Task DeleteDocumentAsync(Guid documentId)
-            => dbContext.Documents.Where(d => d.Id == documentId).ExecuteDeleteAsync();
-
-    public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true)
-    {
-        var (reformulatedQuestion, chunks) = await CreateContextAsync(question, reformulate);
-
-        var answer = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion);
-        return new Response(reformulatedQuestion, answer);
-    }
-
-    public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true)
-    {
-        var (reformulatedQuestion, chunks) = await CreateContextAsync(question, reformulate);
-
-        var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion);
-
-        // The first message contains the original question.
-        yield return new Response(reformulatedQuestion, null, StreamState.Start);
+        TokenUsageResponse? tokenUsageResponse = null;
 
         // Return each token as a partial response.
-        await foreach (var token in answerStream)
+        await foreach (var (token, tokenUsage) in answerStream)
         {
-            yield return new Response(null, token, StreamState.Append);
+            // Token usage is expected in the last message.
+            tokenUsageResponse = tokenUsage is not null ? new(tokenUsage) : null;
+            yield return new(token, tokenUsageResponse is null ? StreamState.Append : StreamState.End, tokenUsageResponse);
         }
 
-        // The last message tells the client that the stream has ended.
-        yield return new Response(null, null, StreamState.End);
+        // If the token usage has not been returned in the last message, we must explicitly tells that the stream is ended.
+        if (tokenUsageResponse is null)
+        {
+            yield return new(null, StreamState.End);
+        }
     }
 
-    private async Task<(string Question, IEnumerable<string> Chunks)> CreateContextAsync(Question question, bool reformulate = true)
+    private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<string> Chunks)> CreateContextAsync(Question question, bool reformulate = true)
     {
-        // Reformulate the following question taking into account the context of the chat to perform keyword search and embeddings:
-        var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : question.Text;
+        // Reformulate the question taking into account the context of the chat to perform keyword search and embeddings.
+        var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text) : new(question.Text);
+        var embeddingTokenCount = tokenizerService.CountEmbeddingTokens(reformulatedQuestion.Text!);
 
         // Perform Vector Search on SQL Database.
-        var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion);
+        var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion.Text!);
 
         var chunks = await dbContext.DocumentChunks
                     .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
@@ -123,6 +111,6 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
                     .Take(appSettings.MaxRelevantChunks)
                     .ToListAsync();
 
-        return (reformulatedQuestion, chunks);
+        return (reformulatedQuestion, embeddingTokenCount, chunks);
     }
 }

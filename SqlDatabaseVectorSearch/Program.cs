@@ -19,9 +19,14 @@ builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, relo
 var aiSettings = builder.Services.ConfigureAndGet<AzureOpenAISettings>(builder.Configuration, "AzureOpenAI")!;
 var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
+builder.Services.AddAzureSql<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
 {
     options.UseVectorSearch();
 }, options =>
@@ -48,18 +53,16 @@ builder.Services.AddKernel()
     .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
+builder.Services.AddSingleton<TextChunkerService>();
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
+
 builder.Services.AddScoped<VectorSearchService>();
+builder.Services.AddScoped<DocumentService>();
 
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
-
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-});
 
 builder.Services.AddOpenApi(options =>
 {
@@ -93,57 +96,6 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
 });
 
-var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
-
-documentsApiGroup.MapGet(string.Empty, async (VectorSearchService vectorSearchService) =>
-{
-    var documents = await vectorSearchService.GetDocumentsAsync();
-    return TypedResults.Ok(documents);
-})
-.WithSummary("Gets the list of documents");
-
-documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, VectorSearchService vectorSearchService) =>
-{
-    var documents = await vectorSearchService.GetDocumentChunksAsync(documentId);
-    return TypedResults.Ok(documents);
-})
-.WithSummary("Gets the list of chunks of a given document")
-.WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
-
-documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, VectorSearchService vectorSearchService) =>
-{
-    var chunk = await vectorSearchService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
-    if (chunk is null)
-    {
-        return TypedResults.NotFound();
-    }
-
-    return TypedResults.Ok(chunk);
-})
-.ProducesProblem(StatusCodes.Status404NotFound)
-.WithSummary("Gets the details of a given chunk, includings its embedding");
-
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService,
-    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
-{
-    using var stream = file.OpenReadStream();
-    documentId = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
-
-    return TypedResults.Ok(new UploadDocumentResponse(documentId.Value));
-})
-.DisableAntiforgery()
-.ProducesProblem(StatusCodes.Status400BadRequest)
-.WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
-
-documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, VectorSearchService vectorSearchService) =>
-{
-    await vectorSearchService.DeleteDocumentAsync(documentId);
-    return TypedResults.NoContent();
-})
-.WithSummary("Deletes a document")
-.WithDescription("This endpoint deletes the document and all its chunks.");
-
 app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
@@ -157,7 +109,7 @@ app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSear
 app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
-    async IAsyncEnumerable<Response> Stream()
+    async IAsyncEnumerable<QuestionResponse> Stream()
     {
         // Requests a streaming response.
         var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);
@@ -173,5 +125,56 @@ app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vector
 .WithSummary("Asks a question and gets the response as streaming")
 .WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
 .WithTags("Ask");
+
+var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
+
+documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService) =>
+{
+    var documents = await documentService.GetDocumentsAsync();
+    return TypedResults.Ok(documents);
+})
+.WithSummary("Gets the list of documents");
+
+documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService) =>
+{
+    var documents = await documentService.GetDocumentChunksAsync(documentId);
+    return TypedResults.Ok(documents);
+})
+.WithSummary("Gets the list of chunks of a given document")
+.WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
+
+documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService) =>
+{
+    var chunk = await documentService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
+    if (chunk is null)
+    {
+        return TypedResults.NotFound();
+    }
+
+    return TypedResults.Ok(chunk);
+})
+.ProducesProblem(StatusCodes.Status404NotFound)
+.WithSummary("Gets the details of a given chunk, includings its embedding");
+
+documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService) =>
+{
+    await documentService.DeleteDocumentAsync(documentId);
+    return TypedResults.NoContent();
+})
+.WithSummary("Deletes a document")
+.WithDescription("This endpoint deletes the document and all its chunks.");
+
+documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService,
+    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
+{
+    using var stream = file.OpenReadStream();
+    var response = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
+
+    return TypedResults.Ok(response);
+})
+.DisableAntiforgery()
+.ProducesProblem(StatusCodes.Status400BadRequest)
+.WithSummary("Uploads a document")
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
 
 app.Run();
