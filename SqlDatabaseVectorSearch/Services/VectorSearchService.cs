@@ -1,6 +1,5 @@
 ﻿using System.Data;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
@@ -28,7 +27,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         var strategy = dbContext.Database.CreateExecutionStrategy();
         var document = await strategy.ExecuteAsync(async (cancellationToken) =>
         {
-            await dbContext.Database.BeginTransactionAsync();
+            await dbContext.Database.BeginTransactionAsync(cancellationToken);
 
             if (documentId.HasValue)
             {
