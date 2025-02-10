@@ -6,7 +6,7 @@ namespace SqlDatabaseVectorSearch.ContentDecoders;
 
 public class PdfContentDecoder : IContentDecoder
 {
-    public Task<string> DecodeAsync(Stream stream, string contentType)
+    public Task<string> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
     {
         var content = new StringBuilder();
 

@@ -96,23 +96,23 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
 });
 
-app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService,
+app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
-    var response = await vectorSearchService.AskQuestionAsync(question, reformulate);
+    var response = await vectorSearchService.AskQuestionAsync(question, reformulate, cancellationToken);
     return TypedResults.Ok(response);
 })
 .WithSummary("Asks a question")
 .WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
 .WithTags("Ask");
 
-app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService,
+app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
 {
     async IAsyncEnumerable<QuestionResponse> Stream()
     {
         // Requests a streaming response.
-        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate);
+        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate, cancellationToken);
 
         await foreach (var delta in responseStream)
         {
@@ -128,24 +128,24 @@ app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vector
 
 var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
 
-documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService) =>
+documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var documents = await documentService.GetDocumentsAsync();
+    var documents = await documentService.GetDocumentsAsync(cancellationToken);
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of documents");
 
-documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService) =>
+documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var documents = await documentService.GetDocumentChunksAsync(documentId);
+    var documents = await documentService.GetDocumentChunksAsync(documentId, cancellationToken);
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of chunks of a given document")
 .WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
 
-documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService) =>
+documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var chunk = await documentService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId);
+    var chunk = await documentService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId, cancellationToken);
     if (chunk is null)
     {
         return TypedResults.NotFound();
@@ -156,19 +156,19 @@ documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", asyn
 .ProducesProblem(StatusCodes.Status404NotFound)
 .WithSummary("Gets the details of a given chunk, includings its embedding");
 
-documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService) =>
+documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    await documentService.DeleteDocumentAsync(documentId);
+    await documentService.DeleteDocumentAsync(documentId, cancellationToken);
     return TypedResults.NoContent();
 })
 .WithSummary("Deletes a document")
 .WithDescription("This endpoint deletes the document and all its chunks.");
 
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService,
+documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
     [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
 {
     using var stream = file.OpenReadStream();
-    var response = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId);
+    var response = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId, cancellationToken);
 
     return TypedResults.Ok(response);
 })

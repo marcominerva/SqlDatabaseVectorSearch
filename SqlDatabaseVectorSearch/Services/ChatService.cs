@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -13,9 +14,9 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
-    public async Task<ChatResponse> CreateQuestionAsync(Guid conversationId, string question)
+    public async Task<ChatResponse> CreateQuestionAsync(Guid conversationId, string question, CancellationToken cancellationToken = default)
     {
-        var chat = await GetChatHistoryAsync(conversationId);
+        var chat = await GetChatHistoryAsync(conversationId, cancellationToken);
 
         var embeddingQuestion = $"""
             Reformulate the following question taking into account the context of the chat to perform embeddings search:
@@ -28,34 +29,34 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
         chat.AddUserMessage(embeddingQuestion);
 
-        var reformulatedQuestion = await chatCompletionService.GetChatMessageContentAsync(chat)!;
+        var reformulatedQuestion = await chatCompletionService.GetChatMessageContentAsync(chat, cancellationToken: cancellationToken);
         chat.AddAssistantMessage(reformulatedQuestion.Content!);
 
-        await UpdateCacheAsync(conversationId, chat);
+        await UpdateCacheAsync(conversationId, chat, cancellationToken);
 
         var tokenUsage = GetTokenUsage(reformulatedQuestion);
 
         return new(reformulatedQuestion.Content!, tokenUsage);
     }
 
-    public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question)
+    public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question, CancellationToken cancellationToken = default)
     {
         var chat = CreateChatAsync(chunks, question);
 
         var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = appSettings.MaxOutputTokens
-        });
+        }, cancellationToken: cancellationToken);
 
         // Add question and answer to the chat history.
-        await SetChatHistoryAsync(conversationId, question, answer.Content!);
+        await SetChatHistoryAsync(conversationId, question, answer.Content!, cancellationToken);
 
         var tokenUsage = GetTokenUsage(answer);
 
         return new(answer.Content!, tokenUsage);
     }
 
-    public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question)
+    public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var chat = CreateChatAsync(chunks, question);
 
@@ -63,7 +64,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         await foreach (var token in chatCompletionService.GetStreamingChatMessageContentsAsync(chat, new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = appSettings.MaxOutputTokens
-        }))
+        }, cancellationToken: cancellationToken))
         {
             if (!string.IsNullOrEmpty(token.Content))
             {
@@ -82,7 +83,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         }
 
         // Add question and answer to the chat history.
-        await SetChatHistoryAsync(conversationId, question, answer.ToString());
+        await SetChatHistoryAsync(conversationId, question, answer.ToString(), cancellationToken);
     }
 
     private static TokenUsage? GetTokenUsage(Microsoft.SemanticKernel.ChatMessageContent message)
@@ -153,28 +154,27 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         return chat;
     }
 
-    private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat)
-        => await cache.SetAsync(conversationId.ToString(), chat);
+    private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat, CancellationToken cancellationToken)
+        => await cache.SetAsync(conversationId.ToString(), chat, cancellationToken: cancellationToken);
 
-    private async Task<ChatHistory> GetChatHistoryAsync(Guid conversationId)
+    private async Task<ChatHistory> GetChatHistoryAsync(Guid conversationId, CancellationToken cancellationToken)
     {
-        var historyCache = await cache.GetOrCreateAsync(conversationId.ToString(),
-        (cancellationToken) =>
+        var historyCache = await cache.GetOrCreateAsync(conversationId.ToString(), (cancellationToken) =>
         {
             return ValueTask.FromResult<ChatHistory>([]);
-        });
+        }, cancellationToken: cancellationToken);
 
         var chat = new ChatHistory(historyCache);
         return chat;
     }
 
-    private async Task SetChatHistoryAsync(Guid conversationId, string question, string answer)
+    private async Task SetChatHistoryAsync(Guid conversationId, string question, string answer, CancellationToken cancellationToken)
     {
-        var history = await GetChatHistoryAsync(conversationId);
+        var history = await GetChatHistoryAsync(conversationId, cancellationToken);
 
         history.AddUserMessage(question);
         history.AddAssistantMessage(answer);
 
-        await UpdateCacheAsync(conversationId, history);
+        await UpdateCacheAsync(conversationId, history, cancellationToken);
     }
 }
