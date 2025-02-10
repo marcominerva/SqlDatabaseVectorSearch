@@ -57,8 +57,8 @@ builder.Services.AddSingleton<TextChunkerService>();
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 
-builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddScoped<DocumentService>();
+builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
@@ -130,14 +130,14 @@ var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
 
 documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var documents = await documentService.GetDocumentsAsync(cancellationToken);
+    var documents = await documentService.GetAsync(cancellationToken);
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of documents");
 
 documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var documents = await documentService.GetDocumentChunksAsync(documentId, cancellationToken);
+    var documents = await documentService.GetChunksAsync(documentId, cancellationToken);
     return TypedResults.Ok(documents);
 })
 .WithSummary("Gets the list of chunks of a given document")
@@ -145,7 +145,7 @@ documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, Doc
 
 documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    var chunk = await documentService.GetDocumentChunkEmbeddingAsync(documentId, documentChunkId, cancellationToken);
+    var chunk = await documentService.GetChunkEmbeddingAsync(documentId, documentChunkId, cancellationToken);
     if (chunk is null)
     {
         return TypedResults.NotFound();
@@ -158,7 +158,7 @@ documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", asyn
 
 documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
-    await documentService.DeleteDocumentAsync(documentId, cancellationToken);
+    await documentService.DeleteAsync(documentId, cancellationToken);
     return TypedResults.NoContent();
 })
 .WithSummary("Deletes a document")

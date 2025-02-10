@@ -32,7 +32,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             if (documentId.HasValue)
             {
                 // If the user is importing a document that already exists, delete the previous one.
-                await documentService.DeleteDocumentAsync(documentId.Value, cancellationToken);
+                await documentService.DeleteAsync(documentId.Value, cancellationToken);
             }
 
             var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
