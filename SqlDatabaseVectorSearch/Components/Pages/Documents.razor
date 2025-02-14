@@ -6,6 +6,8 @@
 @inject IJSRuntime JSRuntime
 
 <Toasts class="p-3" Messages="messages" Placement="ToastsPlacement.TopRight" />
+<ConfirmDialog @ref="dialog" />
+
 <PageTitle>Documents</PageTitle>
 
 <h2 class="mb-4">Upload new document</h2>
@@ -40,7 +42,7 @@
                 <th></th>
                 <th>Name</th>
                 <th>Number of chunks</th>
-                <th>Creation Date</th>
+                <th>Creation date</th>
             </tr>
         </thead>
         <tbody>
@@ -58,12 +60,19 @@
         </tbody>
     </table>
 
-    <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments">
-        <Icon Name="IconName.X" /><span class="d-none d-lg-inline ps-3">Delete</span>
-    </Button>
+    <div class="row">
+        <div class="col-md-2 col-sm-3 col-2">
+            <div class="d-grid gap-2">
+                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments">
+                    <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
+                </Button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
+    private ConfirmDialog dialog = default!;
     private Button uploadButton = default!;
     private Button deleteButton = default!;
 
@@ -73,8 +82,13 @@
     [SupplyParameterFromForm]
     public IBrowserFile? File { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
         await LoadDocumentsAsync();
     }
 
@@ -87,9 +101,11 @@
         {
             documents.Add(new SelectableDocument(dbDocument.Id, dbDocument.Name, dbDocument.CreationDate, dbDocument.ChunkCount)
                 {
-                    LocalCreationDateString = await JSRuntime.InvokeAsync<string>("getLocalTime", dbDocument.CreationDate)
+                    LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
                 });
         }
+
+        StateHasChanged();
     }
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
@@ -114,7 +130,7 @@
             await vectorSearchService.ImportAsync(stream, File.Name, MimeUtility.GetMimeMapping(File.Name), null);
 
 
-            CreateToastMessage(ToastType.Success, "Upload document", $"The document {File.Name} has been successfully uploaded and indexed.", DateTime.Now.ToString("g"));
+            CreateToastMessage(ToastType.Success, "Upload document", $"The document {File.Name} has been successfully uploaded and indexed.", await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow));
 
             await LoadDocumentsAsync();
         }
@@ -128,9 +144,19 @@
     {
         var selectedDocuments = documents?.Where(d => d.IsSelected) ?? [];
 
+        var confirmation = await dialog.ShowAsync(
+            title: "Delete the selected document?",
+            message1: "This will delete the documents and all the corresponding embeddings. The operation cannot be undone.",
+            message2: "Do you want to proceed?");
+
+        if (!confirmation)
+        {
+            return;
+        }
+
         try
         {
-            uploadButton.ShowLoading();
+            deleteButton.ShowLoading();
 
             foreach (var document in selectedDocuments)
             {
@@ -138,11 +164,11 @@
             }
 
             await LoadDocumentsAsync();
-            CreateToastMessage(ToastType.Info, "Delete documents", "The selected documents have been successfully deleted.", DateTime.Now.ToString("g"));
+            CreateToastMessage(ToastType.Info, "Delete documents", "The selected documents have been successfully deleted.", await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow));
         }
         finally
         {
-            uploadButton.HideLoading();
+            deleteButton.HideLoading();
         }
     }
 
@@ -158,6 +184,11 @@
             };
 
         messages.Add(toastMessage);
+    }
+
+    private async Task<string> GetLocalDateTimeStringAsync(DateTimeOffset dateTime)
+    {
+        return await JSRuntime.InvokeAsync<string>("getLocalTime", dateTime);
     }
 
     private record class SelectableDocument(Guid Id, string Name, DateTimeOffset CreationDate, int ChunkCount) : Document(Id, Name, CreationDate, ChunkCount)
