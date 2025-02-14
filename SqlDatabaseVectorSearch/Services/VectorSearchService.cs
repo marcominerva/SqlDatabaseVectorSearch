@@ -7,11 +7,12 @@ using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
+using SqlDatabaseVectorSearch.TextChunkers;
 using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, TextChunkerService textChunkerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -39,7 +40,8 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             dbContext.Documents.Add(document);
 
             // Split the content into chunks and generate the embeddings for each one.
-            var paragraphs = textChunkerService.Split(content);
+            var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
+            var paragraphs = textChunker.Split(content);
             var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs, cancellationToken: cancellationToken);
 
             // Save the document chunks and the corresponding embedding in the database.

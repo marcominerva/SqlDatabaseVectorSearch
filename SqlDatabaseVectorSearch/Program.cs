@@ -4,11 +4,13 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
+using MimeMapping;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
+using SqlDatabaseVectorSearch.TextChunkers;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.OpenApi;
 
@@ -53,7 +55,6 @@ builder.Services.AddKernel()
     .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
 
-builder.Services.AddSingleton<TextChunkerService>();
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
 
@@ -63,11 +64,15 @@ builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
+builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Markdown);
+
+builder.Services.AddKeyedSingleton<ITextChunker, DefaultTextChunker>(KeyedService.AnyKey);
+builder.Services.AddKeyedSingleton<ITextChunker, MarkdownTextChunker>(MediaTypeNames.Text.Markdown);
 
 builder.Services.AddOpenApi(options =>
 {
     options.RemoveServerList();
-    options.AddDefaultResponse();
+    options.AddDefaultProblemDetailsResponse();
 });
 
 builder.Services.AddDefaultProblemDetails();
@@ -135,6 +140,21 @@ documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService, C
 })
 .WithSummary("Gets the list of documents");
 
+documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
+    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
+{
+    using var stream = file.OpenReadStream();
+
+    // Note: file.ContentType is not 100% reliable (for example, for markdown file).
+    var response = await vectorSearchService.ImportAsync(stream, file.FileName, MimeUtility.GetMimeMapping(file.FileName), documentId, cancellationToken);
+
+    return TypedResults.Ok(response);
+})
+.DisableAntiforgery()
+.ProducesProblem(StatusCodes.Status400BadRequest)
+.WithSummary("Uploads a document")
+.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX, TXT and MD files are supported.");
+
 documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
 {
     var documents = await documentService.GetChunksAsync(documentId, cancellationToken);
@@ -163,18 +183,5 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, Documen
 })
 .WithSummary("Deletes a document")
 .WithDescription("This endpoint deletes the document and all its chunks.");
-
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
-    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
-{
-    using var stream = file.OpenReadStream();
-    var response = await vectorSearchService.ImportAsync(stream, file.FileName, file.ContentType, documentId, cancellationToken);
-
-    return TypedResults.Ok(response);
-})
-.DisableAntiforgery()
-.ProducesProblem(StatusCodes.Status400BadRequest)
-.WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX and TXT files are supported.");
 
 app.Run();

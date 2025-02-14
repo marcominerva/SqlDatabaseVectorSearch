@@ -1,10 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Text;
+using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 
-namespace SqlDatabaseVectorSearch.Services;
+namespace SqlDatabaseVectorSearch.TextChunkers;
 
-public class TextChunkerService(TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions)
+public class DefaultTextChunker(TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions) : ITextChunker
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
