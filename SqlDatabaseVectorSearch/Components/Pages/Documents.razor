@@ -10,11 +10,14 @@
 
 <PageTitle>Documents</PageTitle>
 
-<h2 class="mb-4">Upload new document</h2>
+<h2 class="mb-4">
+    <Icon Name="IconName.Upload" class="me-2" />
+    Upload new document
+</h2>
 
 <EditForm Model="@this" OnValidSubmit="HandleValidSubmit">
     <div class="row">
-        <div class="col-md-10 col-sm-9 col-10">
+        <div class="col-md-5 col-sm-4 col-5">
             <div class="input-group">
                 <span class="input-group-text">
                     <Tooltip Title="PDF, DOCX, TXT and MD files are supported" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
@@ -22,6 +25,17 @@
                     </Tooltip>
                 </span>
                 <InputFile class="form-control" OnChange="HandleFileSelected" />
+            </div>
+        </div>
+        <div class="col-md-5 col-sm-5 col-5">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                        <Icon Class="d-flex text-body-secondary me-2" Name="IconName.InfoCircle"></Icon>
+                    </Tooltip>
+                    Document ID
+                </span>
+                <TextInput Placeholder="Enter a valid GUID" @bind-Value="documentId" />
             </div>
         </div>
         <div class="col-md-2 col-sm-3 col-2">
@@ -34,13 +48,18 @@
 
 @if (documents.Count > 0)
 {
-    <h2 class="mt-4">Available documents</h2>
+    <h2 class="mt-4">
+        <Icon Name="IconName.Files" class="me-2" />
+        Available documents
+    </h2>
 
     <table class="table table-bordered table-striped table-hover">
         <thead>
             <tr>
                 <th></th>
+                <th>Id</th>
                 <th>Name</th>
+                <th>Content type</th>
                 <th>Number of chunks</th>
                 <th>Creation date</th>
             </tr>
@@ -50,9 +69,11 @@
             {
                 <tr>
                     <td>
-                        <InputCheckbox class="form-check-input" @bind-Value="document.IsSelected" @onchange="StateHasChanged" />
+                        <CheckboxInput @bind-Value="document.IsSelected" @onchange="StateHasChanged" />
                     </td>
+                    <td>@document.Id</td>
                     <td>@document.Name</td>
+                    <td>@document.ContentType</td>
                     <td>@document.ChunkCount</td>
                     <td>@document.LocalCreationDateString</td>
                 </tr>
@@ -81,6 +102,8 @@
 
     [SupplyParameterFromForm]
     public IBrowserFile? File { get; set; }
+
+    public string? documentId { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -127,7 +150,7 @@
             await using var inputStream = File.OpenReadStream(20 * 1024 * 1024); // 20 MB
             await using var stream = await inputStream.GetMemoryStreamAsync();
 
-            await vectorSearchService.ImportAsync(stream, File.Name, MimeUtility.GetMimeMapping(File.Name), null);
+            await vectorSearchService.ImportAsync(stream, File.Name, MimeUtility.GetMimeMapping(File.Name), Guid.Parse(documentId));
 
 
             CreateToastMessage(ToastType.Success, "Upload document", $"The document {File.Name} has been successfully uploaded and indexed.", await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow));
@@ -194,6 +217,8 @@
     private record class SelectableDocument(Guid Id, string Name, DateTimeOffset CreationDate, int ChunkCount) : Document(Id, Name, CreationDate, ChunkCount)
     {
         public bool IsSelected { get; set; }
+
+        public string ContentType => MimeUtility.GetMimeMapping(Name);
 
         public string LocalCreationDateString { get; set; } = string.Empty;
     }
