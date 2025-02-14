@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
 using MimeMapping;
+using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
+using SqlDatabaseVectorSearch.Extensions;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
@@ -20,6 +22,11 @@ builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, relo
 // Add services to the container.
 var aiSettings = builder.Services.ConfigureAndGet<AzureOpenAISettings>(builder.Configuration, "AzureOpenAI")!;
 var appSettings = builder.Services.ConfigureAndGet<AppSettings>(builder.Configuration, nameof(AppSettings))!;
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+
+builder.Services.AddBlazorBootstrap();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -83,23 +90,49 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
 
-app.UseExceptionHandler(new ExceptionHandlerOptions
+app.UseWhen(context => context.IsWebRequest(), builder =>
 {
-    StatusCodeSelector = exception => exception switch
+    if (!app.Environment.IsDevelopment())
     {
-        NotSupportedException => StatusCodes.Status501NotImplemented,
-        _ => StatusCodes.Status500InternalServerError
+        builder.UseExceptionHandler("/error");
+
+        // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+        builder.UseHsts();
     }
+
+    builder.UseStatusCodePagesWithReExecute("/error");
 });
 
-app.UseStatusCodePages();
+app.UseWhen(context => context.IsApiRequest(), builder =>
+{
+    app.UseExceptionHandler(new ExceptionHandlerOptions
+    {
+        StatusCodeSelector = exception => exception switch
+        {
+            NotSupportedException => StatusCodes.Status501NotImplemented,
+            _ => StatusCodes.Status500InternalServerError
+        }
+    });
+
+    builder.UseStatusCodePages();
+});
 
 app.MapOpenApi();
 app.UseSwaggerUI(options =>
 {
-    options.RoutePrefix = string.Empty;
     options.SwaggerEndpoint("/openapi/v1.json", builder.Environment.ApplicationName);
 });
+
+app.UseRouting();
+// app.UseRateLimiter();
+app.UseRequestLocalization();
+// app.UseCors();
+
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
     [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>

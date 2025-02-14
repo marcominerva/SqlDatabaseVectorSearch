@@ -1,0 +1,56 @@
+﻿@inherits LayoutComponentBase
+
+<BlazorBootstrapLayout StickyHeader="true">
+    <HeaderSection>
+        <ThemeSwitcher Class="ps-3 ps-lg-2" Position="DropdownMenuPosition.End" />
+    </HeaderSection>
+
+    <SidebarSection>
+        <Sidebar2 Href="/"
+        IconName="IconName.BookHalf"
+        Title="Vector Search"
+        DataProvider="Sidebar2DataProvider"
+        WidthUnit="Unit.Px" />
+    </SidebarSection>
+
+    <ContentSection>
+        @Body
+    </ContentSection>
+
+    <FooterSection>
+        Footer links...
+    </FooterSection>
+</BlazorBootstrapLayout>
+
+@code {
+    private IEnumerable<NavItem> navItems = default!;
+
+    private Task<Sidebar2DataProviderResult> Sidebar2DataProvider(Sidebar2DataProviderRequest request)
+    {
+        if (navItems is null)
+        {
+            navItems = GetNavItems();
+        }
+
+        var result = request.ApplyTo(navItems);
+        return Task.FromResult(result);
+    }
+
+    private IEnumerable<NavItem> GetNavItems()
+    {
+        navItems = [
+            new() { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All},
+            new() { Id = "2", Href = "/counter", IconName = IconName.PlusSquareFill, Text = "Counter"},
+            new() { Id = "3", Href = "/weather", IconName = IconName.Table, Text = "Weather"},
+            new() { Id = "4", Href= "/documents", IconName = IconName.FileTypeTxt, Text = "Documents" }
+        ];
+
+        return navItems;
+    }
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
