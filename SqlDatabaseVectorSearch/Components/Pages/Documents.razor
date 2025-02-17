@@ -127,6 +127,8 @@ else
         await Task.Delay(2000);
         await using var scope = ServiceProvider.CreateAsyncScope();
         await LoadDocumentsAsync(scope.ServiceProvider);
+
+        StateHasChanged();
     }
 
     private async Task LoadDocumentsAsync(IServiceProvider services)
@@ -142,8 +144,6 @@ else
                     LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
                 });
         }
-
-        StateHasChanged();
     }
 
     private void HandleFileSelected(InputFileChangeEventArgs e)

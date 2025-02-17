@@ -1,12 +1,38 @@
 ﻿@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-<PageTitle>Blazor Bootstrap - Web App (.NET 9) - Starter Template</PageTitle>
+@inject IHttpClientFactory HttpClientFactory
 
-<h1>Hello, world!</h1>
+<PageTitle>SQL Database Vector Search</PageTitle>
 
-Welcome to your new Blazor Bootstrap - Web App (.NET 9).
-<br />
-<br />
-Interactive render mode: Server
-<br />
-Interactivity location: Global
+@if (markdown is null)
+{
+    <div class="d-flex justify-content-center">
+        <Spinner Type="SpinnerType.Border" Color="SpinnerColor.Primary" />
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col">
+            <Markdown style="overflow-y:auto;">@markdown</Markdown>
+        </div>
+    </div>
+}
+
+@code
+{
+    private string markdown = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        markdown = await HttpClientFactory.CreateClient().GetStringAsync("https://raw.githubusercontent.com/marcominerva/SqlDatabaseVectorSearch/refs/heads/master/README.md");
+
+        StateHasChanged();
+    }
+}
