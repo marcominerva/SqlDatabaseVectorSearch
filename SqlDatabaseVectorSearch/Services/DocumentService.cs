@@ -36,4 +36,7 @@ public class DocumentService(ApplicationDbContext dbContext)
 
     public Task DeleteAsync(Guid documentId, CancellationToken cancellationToken = default)
             => dbContext.Documents.Where(d => d.Id == documentId).ExecuteDeleteAsync(cancellationToken);
+
+    public Task DeleteAsync(IEnumerable<Guid> documentIds, CancellationToken cancellationToken = default)
+        => dbContext.Documents.Where(d => documentIds.Contains(d.Id)).ExecuteDeleteAsync(cancellationToken);
 }
