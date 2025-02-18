@@ -2,15 +2,17 @@
 
 <BlazorBootstrapLayout StickyHeader="true">
     <HeaderSection>
-        <ThemeSwitcher Class="ps-3 ps-lg-2" Position="DropdownMenuPosition.End" />
+        <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch" target="_blank" class="text-decoration-none" title="View on GitHub">
+            <Icon Name="IconName.Github" Class="ps-3 ps-lg-2" Size="IconSize.x2" Color="IconColor.Muted"></Icon>
+        </a>
     </HeaderSection>
 
     <SidebarSection>
         <Sidebar2 Href="/"
-        IconName="IconName.Search"
-        Title="SQL Vector Search"
-        DataProvider="Sidebar2DataProvider"
-        WidthUnit="Unit.Px" />
+                  IconName="IconName.Search"
+                  Title="SQL Vector Search"
+                  DataProvider="Sidebar2DataProvider"
+                  WidthUnit="Unit.Px" />
     </SidebarSection>
 
     <ContentSection>
@@ -40,9 +42,8 @@
     {
         navItems = [
             new() { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All},
-            new() { Id = "2", Href = "/counter", IconName = IconName.PlusSquareFill, Text = "Counter"},
-            new() { Id = "3", Href = "/weather", IconName = IconName.Table, Text = "Weather"},
-            new() { Id = "4", Href= "/documents", IconName = IconName.FileText, Text = "Documents" }
+            new() { Id = "2", Href = "/ask", IconName = IconName.ChatDots, Text = "Ask"},
+            new() { Id = "3", Href= "/documents", IconName = IconName.FileText, Text = "Documents" }
         ];
 
         return navItems;

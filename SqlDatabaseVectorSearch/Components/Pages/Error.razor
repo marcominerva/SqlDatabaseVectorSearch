@@ -14,7 +14,7 @@
                 The page you're looking for does not exists.
             </p>
         }
-        else
+        else if (Code > 0)
         {
             <PageTitle>Unexpected Error</PageTitle>
 
@@ -26,13 +26,6 @@
         }
 
         <a title="Back to Home" href="/" class="btn btn-primary"><i class="bi bi-house-door-fill"></i> Back to Home</a>
-
-        @if (ShowRequestId)
-        {
-            <p>
-                <strong>Request ID:</strong> <code>@RequestId</code>
-            </p>
-        }
     </div>
 </div>
 
@@ -43,10 +36,4 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "code")]
     public int Code { get; set; }
-
-    private string? RequestId { get; set; }
-    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
-
-    protected override void OnInitialized() =>
-        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
 }
