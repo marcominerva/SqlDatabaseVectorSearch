@@ -101,7 +101,7 @@ app.UseWhen(context => context.IsWebRequest(), builder =>
         builder.UseHsts();
     }
 
-    builder.UseStatusCodePagesWithReExecute("/error");
+    builder.UseStatusCodePagesWithRedirects("/error?code={0}");
 });
 
 app.UseWhen(context => context.IsApiRequest(), builder =>
