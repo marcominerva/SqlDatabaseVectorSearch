@@ -1,16 +1,151 @@
 ﻿@page "/ask"
 
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JSRuntime
+
 <PageTitle>Chat with your data</PageTitle>
 
-<p role="status">Current count: @currentCount</p>
+<div class="card mx-auto">
+    <div class="card-body">
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+        @foreach (var message in messages)
+        {
+            if (message.Role == "user")
+            {
+                <div class="d-flex align-items-baseline text-end justify-content-end">
+                    <div class="pe-2">
+                        <div>
+                            <div class="card card-text d-inline-block p-2 px-3 m-1">
+                                <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="position-relative avatar">
+                        <Image src="/images/user.png" class="img-fluid rounded-circle" alt="" />
+                    </div>
+                </div>
+            }
+            else if (message.Role == "assistant")
+            {
+                <div class="d-flex align-items-baseline">
+                    <div class="position-relative avatar">
+                        <Image src="/images/assistant.png" class="img-fluid rounded-circle" alt="" />
+                    </div>
+                    <div class="pe-2">
+                        <div>
+                            @if (message.Text is null)
+                            {
+                                <div class="card card-text d-inline-block p-3 px-3 m-1">
+                                    <div class="progress-chat" role="progressbar" aria-label="I'm thinking" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar-chat">
+                                            <div class="progress-bar-indeterminate"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="card card-text d-inline-block p-2 px-3 m-1">
+                                    <div>
+                                        <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                                    </div>
+                                    @if (message.IsCompleted)
+                                    {
+                                        <div class="text-end bg-transparent border-0">
+                                            <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
+                                                <button class="btn" @onclick="@(async () => await CopyToClipboard(message.Text))">
+                                                    <Icon Name="IconName.Clipboard" />
+                                                </button>
+                                            </Tooltip>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
 
-@code {
-    private int currentCount = 0;
+    <div class="card-footer bg-white w-100 bottom-0 m-0 p-1">
+        <div class="input-group">
+            <span class="input-group-text bg-transparent border-0">
+                <Tooltip Title="Messages aren't stored in any way on either the client or the server." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                </Tooltip>
+            </span>
+            <input @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" autofocus />
+            <div class="input-group-text bg-transparent border-0">
+                <Button @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
+                    <Icon Name="IconName.Send" />
+                </Button>
+                <Button @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
+                    <Icon CustomIconName="bi bi-x-lg" />
+                </Button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    private void IncrementCount()
+@code
+{
+    private Button askButton = default!;
+    private Button resetButton = default!;
+
+    private IList<Message> messages = [];
+    private string? question;
+
+    private Guid conversationId = Guid.NewGuid();
+    private bool isAsking = false;
+
+
+    private async Task AskQuestion()
     {
-        currentCount++;
+        isAsking = true;
+
+        try
+        {
+            var userMessage = new Message { Text = question, Role = "user" };
+            messages.Add(userMessage);
+
+            var assistantMessage = new Message { Role = "assistant" };
+            messages.Add(assistantMessage);
+
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
+
+            var response = await vectorSearchService.AskQuestionAsync(new Question(conversationId, question!));
+
+            assistantMessage.Text = response.Answer;
+            assistantMessage.IsCompleted = true;
+
+            question = null;
+        }
+        finally
+        {
+            isAsking = false;
+        }
+    }
+
+    private void Reset()
+    {
+        question = null;
+        conversationId = Guid.NewGuid();
+        messages.Clear();
+    }
+
+    private ValueTask CopyToClipboard(string text)
+    {
+        return JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    public class Message
+    {
+        public string? Text { get; set; }
+
+        public required string Role { get; set; }
+
+        public bool IsCompleted { get; set; }
     }
 }

@@ -124,7 +124,6 @@ else
             return;
         }
 
-        await Task.Delay(2000);
         await using var scope = ServiceProvider.CreateAsyncScope();
         await LoadDocumentsAsync(scope.ServiceProvider);
 
