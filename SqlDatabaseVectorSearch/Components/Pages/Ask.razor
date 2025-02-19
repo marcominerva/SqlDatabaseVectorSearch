@@ -51,12 +51,17 @@
                                     </div>
                                     @if (message.IsCompleted)
                                     {
-                                        <div class="text-end bg-transparent border-0">
-                                            <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
-                                                <button class="btn" @onclick="@(async () => await CopyToClipboard(message.Text))">
-                                                    <Icon Name="IconName.Clipboard" />
-                                                </button>
-                                            </Tooltip>
+                                        <div class="d-flex justify-content-between">
+                                            @*                                             <div class="text-start bg-transparent">
+                                                <Tooltip Title="@tokenUsage" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                                                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                                                </Tooltip>
+                                            </div> *@
+                                            <div class="text-end bg-transparent">
+                                                <Button TooltipColor="TooltipColor.Dark" TooltipTitle="Copy to Clipboard" TooltipPlacement="TooltipPlacement.Bottom" Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
+                                                    <Icon @ref="clipboardIcon" Name="IconName.Clipboard" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -75,7 +80,7 @@
                     <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
                 </Tooltip>
             </span>
-            <input @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" autofocus />
+            <input type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" autofocus @onkeydown="HandleKeyDown" />
             <div class="input-group-text bg-transparent border-0">
                 <Button @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
                     <Icon Name="IconName.Send" />
@@ -92,6 +97,7 @@
 {
     private Button askButton = default!;
     private Button resetButton = default!;
+    private Icon clipboardIcon = default!;
 
     private IList<Message> messages = [];
     private string? question;
@@ -99,6 +105,13 @@
     private Guid conversationId = Guid.NewGuid();
     private bool isAsking = false;
 
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isAsking && !string.IsNullOrWhiteSpace(question))
+        {
+            await AskQuestion();
+        }
+    }
 
     private async Task AskQuestion()
     {
@@ -106,21 +119,33 @@
 
         try
         {
-            var userMessage = new Message { Text = question, Role = "user" };
+            var userQuestion = new Question(conversationId, question!);
+            var userMessage = new Message { Text = userQuestion.Text, Role = "user" };
             messages.Add(userMessage);
 
             var assistantMessage = new Message { Role = "assistant" };
             messages.Add(assistantMessage);
 
+            question = null;
+            StateHasChanged();
+
             await using var scope = ServiceProvider.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
-            var response = await vectorSearchService.AskQuestionAsync(new Question(conversationId, question!));
+            var response = vectorSearchService.AskStreamingAsync(userQuestion);
+            await foreach (var delta in response)
+            {
+                if (delta.StreamState == StreamState.Append)
+                {
+                    assistantMessage.Text += delta.Answer;
+                }
+                else if (delta.StreamState == StreamState.End)
+                {
+                    assistantMessage.IsCompleted = true;
+                }
 
-            assistantMessage.Text = response.Answer;
-            assistantMessage.IsCompleted = true;
-
-            question = null;
+                StateHasChanged();
+            }
         }
         finally
         {
@@ -135,9 +160,9 @@
         messages.Clear();
     }
 
-    private ValueTask CopyToClipboard(string text)
+    private async Task CopyToClipboard(string text)
     {
-        return JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
     }
 
     public class Message
