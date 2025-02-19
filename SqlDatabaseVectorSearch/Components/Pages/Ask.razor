@@ -127,7 +127,7 @@
             messages.Add(assistantMessage);
 
             question = null;
-            StateHasChanged();
+            await Task.Yield();
 
             await using var scope = ServiceProvider.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
@@ -144,6 +144,7 @@
                     assistantMessage.IsCompleted = true;
                 }
 
+                await Task.Yield();
                 StateHasChanged();
             }
         }

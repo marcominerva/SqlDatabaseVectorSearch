@@ -31,7 +31,7 @@ else
             return;
         }
 
-        markdown = await HttpClientFactory.CreateClient().GetStringAsync("https://raw.githubusercontent.com/marcominerva/SqlDatabaseVectorSearch/refs/heads/master/README.md");
+        markdown = await HttpClientFactory.CreateClient().GetStringAsync("https://raw.githubusercontent.com/marcominerva/SqlDatabaseVectorSearch/refs/heads/master/docs.md");
 
         StateHasChanged();
     }
