@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
 
+<Toasts class="p-3" AutoHide="true" Placement="ToastsPlacement.TopRight" />
+
 <BlazorBootstrapLayout StickyHeader="true">
     <HeaderSection>
         <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch" target="_blank" class="text-decoration-none" title="View on GitHub">
@@ -19,9 +21,6 @@
         @Body
     </ContentSection>
 
-    <FooterSection>
-        Footer links...
-    </FooterSection>
 </BlazorBootstrapLayout>
 
 @code {

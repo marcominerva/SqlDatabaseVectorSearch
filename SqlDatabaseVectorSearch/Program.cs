@@ -51,7 +51,6 @@ builder.Services.AddHybridCache(options =>
     };
 });
 
-builder.Services.AddHttpClient();
 builder.Services.ConfigureHttpClientDefaults(builder =>
 {
     builder.AddStandardResilienceHandler();

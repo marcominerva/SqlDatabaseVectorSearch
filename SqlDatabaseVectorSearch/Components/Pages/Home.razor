@@ -1,7 +1,7 @@
 ﻿@page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-@inject IHttpClientFactory HttpClientFactory
+@inject IWebHostEnvironment WebHostEnvironment
 
 <PageTitle>SQL Database Vector Search</PageTitle>
 
@@ -31,7 +31,8 @@ else
             return;
         }
 
-        markdown = await HttpClientFactory.CreateClient().GetStringAsync("https://raw.githubusercontent.com/marcominerva/SqlDatabaseVectorSearch/refs/heads/master/docs.md");
+        var filePath = Path.Combine(WebHostEnvironment.WebRootPath, "docs.md");
+        markdown = await File.ReadAllTextAsync(filePath);
 
         StateHasChanged();
     }
