@@ -60,7 +60,7 @@
                                             <div class="text-end bg-transparent">
                                                 <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
                                                     <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
-                                                        <Icon @ref="clipboardIcon" Name="IconName.Clipboard" />
+                                                        <Icon Name="IconName.Clipboard" />
                                                     </Button>
                                                 </Tooltip>
                                             </div>
@@ -82,7 +82,7 @@
                     <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
                 </Tooltip>
             </span>
-            <input type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" autofocus @onkeydown="HandleKeyDown" />
+            <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />
             <div class="input-group-text bg-transparent border-0">
                 <Button Type="ButtonType.Submit" @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
                     <Icon Name="IconName.Send" />
@@ -99,7 +99,7 @@
 {
     private Button askButton = default!;
     private Button resetButton = default!;
-    private Icon clipboardIcon = default!;
+    private ElementReference askInput = default!;
 
     private IList<Message> messages = [];
     private string? question;
@@ -109,6 +109,16 @@
 
     [Inject]
     protected ToastService ToastService { get; set; } = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("setFocus", askInput);        
+    }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {

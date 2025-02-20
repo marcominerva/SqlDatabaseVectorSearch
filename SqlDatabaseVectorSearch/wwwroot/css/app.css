@@ -1,14 +1,24 @@
 :root {
-    --bs-body-bg: #fff;
-    --bb-sidebar2-top-row-background-color: var(--bb-violet-bg);
-    --bb-sidebar2-top-row-border-color: var(--bb-violet-bg);
-    --bb-sidebar2-navbar-toggler-icon-color: var(--bb-violet-bg);
-    --bb-sidebar2-nav-item-text-active-color-rgb: 112.520718, 44.062154, 249.437846;
+    --bb-sidebar2-width: 270px;
+    --bb-sidebar2-collapsed-width: 50px;
+    --bb-sidebar2-background-color: rgba(234, 234, 234, 1);
+    --bb-sidebar2-top-row-background-color: rgba(0,0,0,0.08);
+    --bb-sidebar2-top-row-border-color: rgb(194,192,192);
+    --bb-sidebar2-title-text-color: rgb(0,0,0);
+    --bb-sidebar2-brand-icon-color: #6f42c1;
+    --bb-sidebar2-brand-image-width: 24px;
+    --bb-sidebar2-brand-image-height: 24px;
+    --bb-sidebar2-title-badge-text-color: rgb(255,255,255);
+    --bb-sidebar2-title-badge-background-color: rgba(25,135,84,var(--bs-bg-opacity,1));
+    --bb-sidebar2-navbar-toggler-icon-color: rgb(0,0,0);
+    --bb-sidebar2-navbar-toggler-background-color: rgba(0,0,0,0.08);
+    --bb-sidebar2-content-border-color: rgb(194,192,192);
     --bb-sidebar2-nav-item-text-color: rgba(0,0,0,0.9);
-    --bb-sidebar2-nav-item-text-hover-color: rgba(var(--bb-sidebar2-nav-item-text-active-color-rgb), 0.9);
-    --bb-sidebar2-nav-item-text-active-color: rgba(var(--bb-sidebar2-nav-item-text-active-color-rgb), 0.9);
-    --bb-sidebar2-nav-item-background-hover-color: rgba(var(--bb-sidebar2-nav-item-text-active-color-rgb), 0.08);
-    --bb-sidebar2-nav-item-group-background-color: rgba(var(--bb-sidebar2-nav-item-text-active-color-rgb), 0.08);
+    --bb-sidebar2-nav-item-text-active-color-rgb: 0,0,0;
+    --bb-sidebar2-nav-item-text-hover-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.9);
+    --bb-sidebar2-nav-item-text-active-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.9);
+    --bb-sidebar2-nav-item-background-hover-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.08);
+    --bb-sidebar2-nav-item-group-background-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.08);
 }
 
 .bb-sidebar2 nav .nav-item a {
