@@ -59,7 +59,7 @@
                                             </div>
                                             <div class="text-end bg-transparent">
                                                 <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
-                                                    <Button Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
+                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
                                                         <Icon @ref="clipboardIcon" Name="IconName.Clipboard" />
                                                     </Button>
                                                 </Tooltip>
@@ -84,10 +84,10 @@
             </span>
             <input type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" autofocus @onkeydown="HandleKeyDown" />
             <div class="input-group-text bg-transparent border-0">
-                <Button @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
+                <Button Type="ButtonType.Submit" @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
                     <Icon Name="IconName.Send" />
                 </Button>
-                <Button @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
+                <Button Type="ButtonType.Reset" @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
                     <Icon CustomIconName="bi bi-x-lg" />
                 </Button>
             </div>

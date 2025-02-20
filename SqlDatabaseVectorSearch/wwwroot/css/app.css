@@ -11,10 +11,6 @@
     --bb-sidebar2-nav-item-group-background-color: rgba(var(--bb-sidebar2-nav-item-text-active-color-rgb), 0.08);
 }
 
-h1:focus {
-    outline: none;
-}
-
 .bb-sidebar2 nav .nav-item a {
     color: var(--bb-sidebar2-nav-item-text-color) !important;
 }
@@ -28,6 +24,10 @@ h1:focus {
         background-color: var(--bb-sidebar2-nav-item-background-hover-color) !important;
         color: var(--bb-sidebar2-nav-item-text-active-color) !important;        
     }
+
+h1:focus {
+    outline: none;
+}
 
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
