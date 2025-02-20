@@ -6,7 +6,7 @@ The application is a Minimal API that exposes endpoints to load documents, gener
 > [!NOTE]
 > If you prefer to use straight SQL, check out the [sql branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/sql).
 
-![SQL Database Vector Search](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/SqlDatabaseVectorSearch.png)
+![SQL Database Vector Search](https://raw.githubusercontent.com/marcominerva/SqlDatabaseVectorSearch/refs/heads/master/SqlDatabaseVectorSearch.png)
 
 ## Setup
 

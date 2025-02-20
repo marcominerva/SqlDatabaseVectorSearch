@@ -156,7 +156,14 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
     }
 
     private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat, CancellationToken cancellationToken)
-        => await cache.SetAsync(conversationId.ToString(), chat, cancellationToken: cancellationToken);
+    {
+        if (chat.Count > appSettings.MessageLimit)
+        {
+            chat.RemoveRange(0, chat.Count - appSettings.MessageLimit);
+        }
+
+        await cache.SetAsync(conversationId.ToString(), chat, cancellationToken: cancellationToken);
+    }
 
     private async Task<ChatHistory> GetChatHistoryAsync(Guid conversationId, CancellationToken cancellationToken)
     {

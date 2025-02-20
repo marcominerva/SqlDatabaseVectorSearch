@@ -15,4 +15,6 @@ public class AppSettings
     public int MaxOutputTokens { get; init; } = 800;
 
     public TimeSpan MessageExpiration { get; init; }
+
+    public int MessageLimit { get; set; } = 20;
 }
