@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using System.Runtime.InteropServices
+
+@inherits LayoutComponentBase
 
 <Toasts class="p-3" AutoHide="true" Placement="ToastsPlacement.TopRight" />
 
@@ -20,6 +22,12 @@
     <ContentSection>
         @Body
     </ContentSection>
+
+    <FooterSection>
+        <div class="footer-content">
+            <span class="ms-auto">@RuntimeInformation.FrameworkDescription</span>
+        </div>        
+    </FooterSection>
 
 </BlazorBootstrapLayout>
 

@@ -24,7 +24,7 @@
                         <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
                     </Tooltip>
                 </span>
-                <InputFile class="form-control" OnChange="HandleFileSelected" />
+                <InputFile class="form-control" OnChange="HandleFileSelected" accept=".pdf,.docx,.txt,.md" />
             </div>
         </div>
         <div class="col-md-5 col-sm-5 col-5">
@@ -105,7 +105,6 @@ else
     private Button deleteButton = default!;
 
     private IList<SelectableDocument> documents = [];
-    private List<ToastMessage> messages = [];
 
     private UploadDocumentRequest uploadDocumentRequest = new();
     private EditContext? editContext;
@@ -161,9 +160,10 @@ else
 
         uploadButton.ShowLoading();
 
+        var fileName = uploadDocumentRequest.File.Name;
+
         try
         {
-            var fileName = uploadDocumentRequest.File.Name;
             await using var inputStream = uploadDocumentRequest.File.OpenReadStream(20 * 1024 * 1024); // 20 MB
             await using var stream = await inputStream.GetMemoryStreamAsync();
 
@@ -176,6 +176,10 @@ else
             ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document {fileName} has been successfully uploaded and indexed."));
 
             await LoadDocumentsAsync(scope.ServiceProvider);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document {fileName}: {ex.Message}"));
         }
         finally
         {
@@ -217,6 +221,10 @@ else
 
             await LoadDocumentsAsync(scope.ServiceProvider);
             ToastService.Notify(await CreateToastMessageAsync(ToastType.Info, "Delete documents", "The selected documents have been successfully deleted."));
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Delete error", $"There was an error while deleting the documents: {ex.Message}"));
         }
         finally
         {

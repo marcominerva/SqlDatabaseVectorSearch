@@ -52,15 +52,17 @@
                                     @if (message.IsCompleted)
                                     {
                                         <div class="d-flex justify-content-between">
-                                            @*                                             <div class="text-start bg-transparent">
-                                                <Tooltip Title="@tokenUsage" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                                            <div class="text-start bg-transparent mt-3">
+                                                <Tooltip Title="@message.TokenUsage" IsHtml="true" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
                                                     <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
                                                 </Tooltip>
-                                            </div> *@
+                                            </div>
                                             <div class="text-end bg-transparent">
-                                                <Button TooltipColor="TooltipColor.Dark" TooltipTitle="Copy to Clipboard" TooltipPlacement="TooltipPlacement.Bottom" Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
-                                                    <Icon @ref="clipboardIcon" Name="IconName.Clipboard" />
-                                                </Button>
+                                                <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
+                                                    <Button Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
+                                                        <Icon @ref="clipboardIcon" Name="IconName.Clipboard" />
+                                                    </Button>
+                                                </Tooltip>
                                             </div>
                                         </div>
                                     }
@@ -105,6 +107,9 @@
     private Guid conversationId = Guid.NewGuid();
     private bool isAsking = false;
 
+    [Inject]
+    protected ToastService ToastService { get; set; } = default!;
+
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !isAsking && !string.IsNullOrWhiteSpace(question))
@@ -117,24 +122,28 @@
     {
         isAsking = true;
 
+        var userQuestion = new Question(conversationId, question!);
+        var userMessage = new Message { Text = userQuestion.Text, Role = "user" };
+        messages.Add(userMessage);
+
+        var assistantMessage = new Message { Role = "assistant" };
+        messages.Add(assistantMessage);
+
+        question = null;
+        await Task.Yield();
+
         try
         {
-            var userQuestion = new Question(conversationId, question!);
-            var userMessage = new Message { Text = userQuestion.Text, Role = "user" };
-            messages.Add(userMessage);
-
-            var assistantMessage = new Message { Role = "assistant" };
-            messages.Add(assistantMessage);
-
-            question = null;
-            await Task.Yield();
-
             await using var scope = ServiceProvider.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
             var response = vectorSearchService.AskStreamingAsync(userQuestion);
             await foreach (var delta in response)
             {
+                if (delta.StreamState == StreamState.Start)
+                {
+                    assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
+                }
                 if (delta.StreamState == StreamState.Append)
                 {
                     assistantMessage.Text += delta.Answer;
@@ -142,11 +151,17 @@
                 else if (delta.StreamState == StreamState.End)
                 {
                     assistantMessage.IsCompleted = true;
+                    assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
                 }
 
                 await Task.Yield();
                 StateHasChanged();
             }
+        }
+        catch (Exception ex)
+        {
+            assistantMessage.Text = $"There was an error while processing the question: {ex.Message}";
+            assistantMessage.IsCompleted = true;
         }
         finally
         {
@@ -166,6 +181,40 @@
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
     }
 
+    private string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
+    {
+        if (tokenUsageResponse is null)
+        {
+            return string.Empty;
+        }
+
+        var reformulation = tokenUsageResponse.Reformulation is not null
+            ? $"<p><strong>Reformulation:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Reformulation)}</p>"
+            : string.Empty;
+
+        var embeddingTokenCount = tokenUsageResponse.EmbeddingTokenCount.HasValue
+            ? $"<p><strong>Embedding Token Count:</strong> {tokenUsageResponse.EmbeddingTokenCount}</p>"
+            : string.Empty;
+
+        var question = tokenUsageResponse.Question is not null
+            ? $"<p><strong>Question:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Question)}</p>"
+            : string.Empty;
+
+        return $"{reformulation}{embeddingTokenCount}{question}";
+    }
+
+    private string FormatTokenUsageDetails(TokenUsage? tokenUsage)
+    {
+        if (tokenUsage is null)
+        {
+            return string.Empty;
+        }
+
+        return $"Input Token Count: {tokenUsage.InputTokenCount}<br />" +
+               $"Output Token Count: {tokenUsage.OutputTokenCount}<br />" +
+               $"Total Token Count: {tokenUsage.TotalTokenCount}";
+    }
+
     public class Message
     {
         public string? Text { get; set; }
@@ -173,5 +222,7 @@
         public required string Role { get; set; }
 
         public bool IsCompleted { get; set; }
+
+        public string? TokenUsage { get; set; }
     }
 }
