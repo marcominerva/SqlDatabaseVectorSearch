@@ -19,7 +19,7 @@
         <PackageReference Include="Microsoft.ML.Tokenizers" Version="1.0.1" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="1.0.1" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.1" />
-        <PackageReference Include="Microsoft.SemanticKernel" Version="1.38.0" />
+        <PackageReference Include="Microsoft.SemanticKernel" Version="1.37.0" />
         <PackageReference Include="MimeMapping" Version="3.1.0" />
         <PackageReference Include="MinimalHelpers.OpenApi" Version="2.1.4" />
         <PackageReference Include="PdfPig" Version="0.1.9" />

@@ -5,7 +5,7 @@
     --bb-sidebar2-top-row-background-color: rgba(0,0,0,0.08);
     --bb-sidebar2-top-row-border-color: rgb(194,192,192);
     --bb-sidebar2-title-text-color: rgb(0,0,0);
-    --bb-sidebar2-brand-icon-color: #6f42c1;
+    --bb-sidebar2-brand-icon-color: rgb(0,0,0);
     --bb-sidebar2-brand-image-width: 24px;
     --bb-sidebar2-brand-image-height: 24px;
     --bb-sidebar2-title-badge-text-color: rgb(255,255,255);
@@ -21,19 +21,15 @@
     --bb-sidebar2-nav-item-group-background-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.08);
 }
 
-.bb-sidebar2 nav .nav-item a {
-    color: var(--bb-sidebar2-nav-item-text-color) !important;
+.bb-sidebar2 nav .nav-item a:hover {
+    background-color: rgba(0,0,0,0.08) !important;
+    color: rgba(0,0,0,0.9) !important;
 }
 
-    .bb-sidebar2 nav .nav-item a:hover {
-        background-color: var(--bb-sidebar2-nav-item-background-hover-color) !important;
-        color: var(--bb-sidebar2-nav-item-text-hover-color) !important;
-    }
-
-    .bb-sidebar2 nav .nav-item a.active {
-        background-color: var(--bb-sidebar2-nav-item-background-hover-color) !important;
-        color: var(--bb-sidebar2-nav-item-text-active-color) !important;        
-    }
+.bb-sidebar2 nav .nav-item a.active {
+    background-color: rgb(194,192,192) !important;
+    color: rgba(0,0,0,0.9) !important;
+}
 
 h1:focus {
     outline: none;

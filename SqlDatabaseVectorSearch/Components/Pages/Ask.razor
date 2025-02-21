@@ -107,9 +107,6 @@
     private Guid conversationId = Guid.NewGuid();
     private bool isAsking = false;
 
-    [Inject]
-    protected ToastService ToastService { get; set; } = default!;
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -117,14 +114,23 @@
             return;
         }
 
-        await JSRuntime.InvokeVoidAsync("setFocus", askInput);        
+        await JSRuntime.InvokeVoidAsync("setFocus", askInput);
     }
 
     private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && !isAsking && !string.IsNullOrWhiteSpace(question))
+        if (isAsking)
+        {
+            return;
+        }
+
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(question))
         {
             await AskQuestion();
+        }
+        else if (e.Key == "ArrowUp" && messages.Count >= 2)
+        {
+            question = messages[^2].Text;
         }
     }
 
