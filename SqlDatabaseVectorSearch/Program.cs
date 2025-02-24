@@ -86,6 +86,7 @@ builder.Services.AddDefaultProblemDetails();
 builder.Services.AddDefaultExceptionHandler();
 
 var app = builder.Build();
+await ConfigureDatabaseAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 app.UseHttpsRedirection();
@@ -96,7 +97,7 @@ app.UseWhen(context => context.IsWebRequest(), builder =>
     {
         builder.UseExceptionHandler("/error");
 
-        // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+        // The default HSTS value is 30 days.
         builder.UseHsts();
     }
 
@@ -218,3 +219,11 @@ documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, Documen
 .WithDescription("This endpoint deletes the document and all its chunks.");
 
 app.Run();
+
+static async Task ConfigureDatabaseAsync(IServiceProvider serviceProvider)
+{
+    await using var scope = serviceProvider.CreateAsyncScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    await dbContext.Database.MigrateAsync();
+}

@@ -47,7 +47,7 @@
     </div>
 </EditForm>
 
-@if (documents.Count == 0)
+@if (isLoading && documents.Count == 0)
 {
     <div class="text-center">
         <Spinner Type="SpinnerType.Dots" Class="me-3 mt-4" Color="SpinnerColor.Primary" />
@@ -104,6 +104,7 @@ else
     private Button uploadButton = default!;
     private Button deleteButton = default!;
 
+    private bool isLoading = true;
     private IList<SelectableDocument> documents = [];
 
     private UploadDocumentRequest uploadDocumentRequest = new();
@@ -133,16 +134,25 @@ else
 
     private async Task LoadDocumentsAsync(IServiceProvider services)
     {
-        var documentService = services.GetRequiredService<DocumentService>();
-        var dbDocuments = await documentService.GetAsync();
+        isLoading = true;
 
-        documents.Clear();
-        foreach (var dbDocument in dbDocuments)
+        try
         {
-            documents.Add(new SelectableDocument(dbDocument.Id, dbDocument.Name, dbDocument.CreationDate, dbDocument.ChunkCount)
-                {
-                    LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
-                });
+            var documentService = services.GetRequiredService<DocumentService>();
+            var dbDocuments = await documentService.GetAsync();
+
+            documents.Clear();
+            foreach (var dbDocument in dbDocuments)
+            {
+                documents.Add(new SelectableDocument(dbDocument.Id, dbDocument.Name, dbDocument.CreationDate, dbDocument.ChunkCount)
+                    {
+                        LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
+                    });
+            }
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
