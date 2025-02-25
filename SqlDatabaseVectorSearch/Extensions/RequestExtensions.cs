@@ -1,5 +1,4 @@
 ﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 
 namespace SqlDatabaseVectorSearch.Extensions;
@@ -30,18 +29,6 @@ public static partial class RequestExtensions
         return isMobileBrowser;
     }
 
-    public static string GetCultureFromRoute(this HttpContext httpContext)
-        => RouteCultureRegex.Match(httpContext.Request.Path).Groups["culture"].Value.ToLowerInvariant();
-
-    public static string GetPathWithCulture(this HttpContext httpContext, string culture)
-    {
-        var request = httpContext.Request;
-        var path = RouteCultureRegex.Replace(request.Path.ToString(), "/");
-        var newPath = $"/{culture}{path}{request.QueryString}";
-
-        return newPath;
-    }
-
     public static bool IsApiRequest(this HttpContext httpContext)
         => httpContext.Request.Path.StartsWithSegments("/api");
 
@@ -50,15 +37,4 @@ public static partial class RequestExtensions
 
     public static bool IsWebRequest(this HttpContext httpContext)
         => !httpContext.IsApiRequest() && !httpContext.IsSwaggerRequest();
-
-    public static string Content(this IUrlHelper urlHelper, HttpContext httpContext, string contentPath)
-        => urlHelper.Content(httpContext.Request, contentPath);
-
-    public static string Content(this IUrlHelper urlHelper, HttpRequest request, string contentPath)
-    {
-        var path = urlHelper.Content(contentPath);
-        var url = $"{request.Scheme}://{request.Host}{request.PathBase}{path}";
-
-        return url;
-    }
 }
