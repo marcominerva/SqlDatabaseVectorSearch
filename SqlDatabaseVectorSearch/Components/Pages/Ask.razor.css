@@ -23,18 +23,18 @@ input[type="checkbox"] + label {
 
 .card-body {
     overflow: auto;
-    height: 490px;
+    height: 560px;
 }
 
 @media (min-width: 768px) {
     .card-body {
-        height: 595px;
+        height: 665px;
     }
 }
 
 @media (min-width: 2560px) {
     .card-body {
-        height: 950px;
+        height: 1020px;
     }
 }
 

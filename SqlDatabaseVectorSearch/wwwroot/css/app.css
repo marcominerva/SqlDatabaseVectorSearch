@@ -1,3 +1,9 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
 :root {
     --bb-sidebar2-width: 270px;
     --bb-sidebar2-collapsed-width: 50px;
