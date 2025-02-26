@@ -1,39 +1,19 @@
 ﻿@page "/"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
-@inject IWebHostEnvironment WebHostEnvironment
-
 <PageTitle>SQL Database Vector Search</PageTitle>
 
-@if (markdown is null)
-{
-    <div class="d-flex justify-content-center">
-        <Spinner Type="SpinnerType.Border" Color="SpinnerColor.Primary" />
-    </div>
-}
-else
-{
-    <div class="row">
-        <div class="col">
-            <Markdown style="overflow-y:auto;">@markdown</Markdown>
-        </div>
-    </div>
-}
+<h1>SQL Database Vector Search</h1>
+<p>
+    How to use the native VECTOR type in <img src="/images/sqldatabase.svg" /> Azure SQL Database to perform embeddings and RAG with <img src="/images/openai.svg" /> Azure OpenAI.
+</p>
+<p>
+    This application allows to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, PDF, DOCX, TXT and MD files are supported. Vectors are saved and retrieved with Entity Framework Core using the <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a> library. Embedding and Chat Completion are integrated with <a href="https://github.com/microsoft/semantic-kernel" target="_blank">Semantic Kernel</a>.
+</p>
 
-@code
-{
-    private string markdown = default!;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!firstRender)
-        {
-            return;
-        }
-
-        var filePath = Path.Combine(WebHostEnvironment.WebRootPath, "docs.md");
-        markdown = await File.ReadAllTextAsync(filePath);
-
-        StateHasChanged();
-    }
-}
+<h3>Supported features</h3>
+<ul>
+    <li>Conversation history with question reformulation</li>
+    <li>Information about token usage</li>
+    <li>Response streaming</li>
+</ul>
