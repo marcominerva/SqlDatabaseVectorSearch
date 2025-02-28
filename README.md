@@ -3,16 +3,13 @@ A repository that showcases the native VECTOR type in Azure SQL Database to perf
 
 The application allows to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, PDF, DOCX, TXT and MD files are supported. Vectors are saved and retrieved with Entity Framework Core using the [EFCore.SqlServer.VectorSearch](https://github.com/efcore/EfCore.SqlServer.VectorSearch) library. Embedding and Chat Completion are integrated with [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
 
-> [!NOTE]
-> If you prefer to use straight SQL, check out the [sql branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/sql).
-
 This repository contains a Blazor Web App as well as a Minimal API that allows to programatically interact with embeddings and RAG.
 
 ### Web App
-![SQL Database Vector Search Web App](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API_.png)
+![SQL Database Vector Search Web App](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_WebApp.png)
 
 ### Web API
-![SQL Database Vector Search API](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API_.png)
+![SQL Database Vector Search API](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API.png)
 
 ## Setup
 
@@ -151,3 +148,6 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
   - The *streamState* property is set to `Append`
   - *origianlQuestion*, *reformulatedQuestion* and *tokenUsage* are always `null`
 - The stream ends when an element with *streamState* equals to `End` is received. This element contains token usage information for the question and the whole answer.
+
+> [!NOTE]
+> If you prefer to use straight SQL, check out the [sql branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/sql).
