@@ -64,7 +64,7 @@ else
         <thead>
             <tr>
                 <th></th>
-                <th>Id</th>
+                <th>ID</th>
                 <th>Name</th>
                 <th>Content type</th>
                 <th>Number of chunks</th>
@@ -76,7 +76,7 @@ else
             {
                 <tr>
                     <td>
-                        <CheckboxInput @bind-Value="document.IsSelected" @onchange="StateHasChanged" />
+                        <CheckboxInput @bind-Value="document.IsSelected" />
                     </td>
                     <td>@document.Id</td>
                     <td>@document.Name</td>

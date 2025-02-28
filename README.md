@@ -9,10 +9,10 @@ The application allows to load documents, generate embeddings and save them into
 This repository contains a Blazor Web App as well as a Minimal API that allows to programatically interact with embeddings and RAG.
 
 ### Web App
-![SQL Database Vector Search Web App](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/docs/SqlDatabaseVectorSearch_API_.png)
+![SQL Database Vector Search Web App](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API_.png)
 
 ### Web API
-![SQL Database Vector Search API](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/docs/SqlDatabaseVectorSearch_API_.png)
+![SQL Database Vector Search API](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API_.png)
 
 ## Setup
 
