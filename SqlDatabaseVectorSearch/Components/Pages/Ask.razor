@@ -59,7 +59,7 @@
                                             </div>
                                             <div class="text-end bg-transparent">
                                                 <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
-                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboard(message.Text))">
+                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message.Text))">
                                                         <Icon Name="IconName.Clipboard" />
                                                     </Button>
                                                 </Tooltip>
@@ -73,6 +73,8 @@
                 </div>
             }
         }
+
+        <div @ref="chat"></div>
     </div>
 
     <div class="card-footer bg-white w-100 bottom-0 m-0 p-1">
@@ -100,6 +102,7 @@
     private Button askButton = default!;
     private Button resetButton = default!;
     private ElementReference askInput = default!;
+    private ElementReference chat = default!;
 
     private IList<Message> messages = [];
     private string? question;
@@ -148,6 +151,8 @@
         question = null;
         await Task.Yield();
 
+        await EnsureMessageIsVisibleAsync();
+
         try
         {
             await using var scope = ServiceProvider.CreateAsyncScope();
@@ -160,7 +165,7 @@
                 {
                     assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
                 }
-                if (delta.StreamState == StreamState.Append)
+                else if (delta.StreamState == StreamState.Append)
                 {
                     assistantMessage.Text += delta.Answer;
                 }
@@ -172,6 +177,8 @@
 
                 await Task.Yield();
                 StateHasChanged();
+
+                await EnsureMessageIsVisibleAsync();
             }
         }
         catch (Exception ex)
@@ -181,6 +188,8 @@
         }
         finally
         {
+            await EnsureMessageIsVisibleAsync();
+
             isAsking = false;
         }
     }
@@ -192,12 +201,12 @@
         messages.Clear();
     }
 
-    private async Task CopyToClipboard(string text)
+    private async Task CopyToClipboardAsync(string text)
     {
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
     }
 
-    private string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
+    private static string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
     {
         if (tokenUsageResponse is null)
         {
@@ -217,18 +226,23 @@
             : string.Empty;
 
         return $"{reformulation}{embeddingTokenCount}{question}";
+
+        static string FormatTokenUsageDetails(TokenUsage? tokenUsage)
+        {
+            if (tokenUsage is null)
+            {
+                return string.Empty;
+            }
+
+            return $"Input Token Count: {tokenUsage.InputTokenCount}<br />" +
+                   $"Output Token Count: {tokenUsage.OutputTokenCount}<br />" +
+                   $"Total Token Count: {tokenUsage.TotalTokenCount}";
+        }
     }
 
-    private string FormatTokenUsageDetails(TokenUsage? tokenUsage)
+    private async Task EnsureMessageIsVisibleAsync()
     {
-        if (tokenUsage is null)
-        {
-            return string.Empty;
-        }
-
-        return $"Input Token Count: {tokenUsage.InputTokenCount}<br />" +
-               $"Output Token Count: {tokenUsage.OutputTokenCount}<br />" +
-               $"Total Token Count: {tokenUsage.TotalTokenCount}";
+        await JSRuntime.InvokeVoidAsync("scrollTo", chat);
     }
 
     public class Message

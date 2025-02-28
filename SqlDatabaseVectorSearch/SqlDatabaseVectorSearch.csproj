@@ -23,12 +23,12 @@
         <PackageReference Include="Microsoft.ML.Tokenizers" Version="1.0.2" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="1.0.2" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="1.0.2" />
-        <PackageReference Include="Microsoft.SemanticKernel" Version="1.39.0" />
+        <PackageReference Include="Microsoft.SemanticKernel" Version="1.40.0" />
         <PackageReference Include="MimeMapping" Version="3.1.0" />
         <PackageReference Include="MinimalHelpers.OpenApi" Version="2.1.4" />
         <PackageReference Include="PdfPig" Version="0.1.9" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="7.3.0" />
-        <PackageReference Include="TinyHelpers.AspNetCore" Version="4.0.19" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="7.3.1" />
+        <PackageReference Include="TinyHelpers.AspNetCore" Version="4.0.20" />
 	</ItemGroup>
 
 </Project>
