@@ -1,0 +1,280 @@
+﻿@page "/documents"
+@using MimeMapping
+
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JSRuntime
+
+<ConfirmDialog @ref="dialog" />
+
+<PageTitle>Documents</PageTitle>
+
+<h4 class="mb-4">
+    <Icon Name="IconName.Upload" class="me-2" />
+    Upload new document
+</h4>
+
+<EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+
+    <div class="row">
+        <div class="col-md-5 col-sm-4 col-5">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <Tooltip Title="PDF, DOCX, TXT and MD files are supported" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                        <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                    </Tooltip>
+                </span>
+                <InputFile class="form-control" OnChange="HandleFileSelected" accept=".pdf,.docx,.txt,.md" />
+            </div>
+        </div>
+        <div class="col-md-5 col-sm-5 col-5">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                        <Icon Class="d-flex text-body-secondary me-2" Name="IconName.InfoCircle"></Icon>
+                    </Tooltip>
+                    Document ID
+                </span>
+                <TextInput Placeholder="Enter a valid GUID or leave empty for auto-generation" @bind-Value="@uploadDocumentRequest.DocumentId" />
+            </div>
+            <ValidationMessage For="@(() => uploadDocumentRequest.DocumentId)" />
+        </div>
+        <div class="col-md-2 col-sm-3 col-2">
+            <div class="d-grid gap-2">
+                <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(uploadDocumentRequest.File is null)"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@if (isLoading && documents.Count == 0)
+{
+    <div class="text-center">
+        <Spinner Type="SpinnerType.Dots" Class="me-3 mt-4" Color="SpinnerColor.Primary" />
+    </div>
+}
+else
+{
+    <h4 class="mt-4 mb-4">
+        <Icon Name="IconName.Files" class="me-2" />
+        Available documents
+    </h4>
+
+    <table class="table table-bordered table-striped table-hover">
+        <thead>
+            <tr>
+                <th></th>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Content type</th>
+                <th>Number of chunks</th>
+                <th>Creation date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var document in documents)
+            {
+                <tr>
+                    <td>
+                        <CheckboxInput @bind-Value="document.IsSelected" />
+                    </td>
+                    <td>@document.Id</td>
+                    <td>@document.Name</td>
+                    <td>@document.ContentType</td>
+                    <td>@document.ChunkCount</td>
+                    <td>@document.LocalCreationDateString</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="row">
+        <div class="col-md-2 col-sm-3 col-2">
+            <div class="d-grid gap-2">
+                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments">
+                    <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
+                </Button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ConfirmDialog dialog = default!;
+    private Button uploadButton = default!;
+    private Button deleteButton = default!;
+
+    private bool isLoading = true;
+    private IList<SelectableDocument> documents = [];
+
+    private UploadDocumentRequest uploadDocumentRequest = new();
+    private EditContext? editContext;
+
+    [Inject]
+    protected ToastService ToastService { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        editContext = new EditContext(uploadDocumentRequest);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        await LoadDocumentsAsync(scope.ServiceProvider);
+
+        StateHasChanged();
+    }
+
+    private async Task LoadDocumentsAsync(IServiceProvider services)
+    {
+        isLoading = true;
+
+        try
+        {
+            var documentService = services.GetRequiredService<DocumentService>();
+            var dbDocuments = await documentService.GetAsync();
+
+            documents.Clear();
+            foreach (var dbDocument in dbDocuments)
+            {
+                documents.Add(new SelectableDocument(dbDocument.Id, dbDocument.Name, dbDocument.CreationDate, dbDocument.ChunkCount)
+                    {
+                        LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
+                    });
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        uploadDocumentRequest.File = e.File;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (uploadDocumentRequest.File is null)
+        {
+            return;
+        }
+
+        uploadButton.ShowLoading();
+
+        var fileName = uploadDocumentRequest.File.Name;
+
+        try
+        {
+            await using var inputStream = uploadDocumentRequest.File.OpenReadStream(20 * 1024 * 1024); // 20 MB
+            await using var stream = await inputStream.GetMemoryStreamAsync();
+
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
+
+            var documentId = string.IsNullOrWhiteSpace(uploadDocumentRequest.DocumentId) ? null : (Guid?)Guid.Parse(uploadDocumentRequest.DocumentId);
+            await vectorSearchService.ImportAsync(stream, fileName, MimeUtility.GetMimeMapping(fileName), documentId);
+
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document {fileName} has been successfully uploaded and indexed."));
+
+            await LoadDocumentsAsync(scope.ServiceProvider);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document {fileName}: {ex.Message}"));
+        }
+        finally
+        {
+            uploadButton.HideLoading();
+        }
+    }
+
+    private async Task DeleteSelectedDocuments()
+    {
+        var selectedDocumentIds = documents?.Where(d => d.IsSelected).Select(d => d.Id) ?? [];
+
+        var options = new ConfirmDialogOptions
+            {
+                YesButtonText = "Yes",
+                YesButtonColor = ButtonColor.Danger,
+                NoButtonText = "No",
+                NoButtonColor = ButtonColor.Secondary
+            };
+
+        var confirmation = await dialog.ShowAsync(
+            title: "Delete the selected documents?",
+            message1: "This will delete the documents and all the corresponding embeddings. The operation cannot be undone.",
+            message2: "Do you want to proceed?",
+            confirmDialogOptions: options);
+
+        if (!confirmation)
+        {
+            return;
+        }
+
+        try
+        {
+            deleteButton.ShowLoading();
+
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var documentService = scope.ServiceProvider.GetRequiredService<DocumentService>();
+
+            await documentService.DeleteAsync(selectedDocumentIds);
+
+            await LoadDocumentsAsync(scope.ServiceProvider);
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Info, "Delete documents", "The selected documents have been successfully deleted."));
+        }
+        catch (Exception ex)
+        {
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Delete error", $"There was an error while deleting the documents: {ex.Message}"));
+        }
+        finally
+        {
+            deleteButton.HideLoading();
+        }
+    }
+
+    private async Task<ToastMessage> CreateToastMessageAsync(ToastType toastType, string title, string message)
+    {
+        var toastMessage = new ToastMessage
+            {
+                Type = toastType,
+                Title = title,
+                HelpText = await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow),
+                Message = message
+            };
+
+        return toastMessage;
+    }
+
+    private async Task<string> GetLocalDateTimeStringAsync(DateTimeOffset dateTime)
+    {
+        return await JSRuntime.InvokeAsync<string>("getLocalTime", dateTime);
+    }
+
+    private record class SelectableDocument(Guid Id, string Name, DateTimeOffset CreationDate, int ChunkCount) : Document(Id, Name, CreationDate, ChunkCount)
+    {
+        public bool IsSelected { get; set; }
+
+        public string ContentType => MimeUtility.GetMimeMapping(Name);
+
+        public string LocalCreationDateString { get; set; } = string.Empty;
+    }
+
+    public class UploadDocumentRequest
+    {
+        [SupplyParameterFromForm]
+        public IBrowserFile? File { get; set; }
+
+        [RegularExpression(@"^(\{|\()?[0-9a-fA-F]{8}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{12}(\}|\))?$", ErrorMessage = "Invalid GUID format.")]
+        public string? DocumentId { get; set; }
+    }
+}

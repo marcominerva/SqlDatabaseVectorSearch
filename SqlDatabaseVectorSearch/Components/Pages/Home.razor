@@ -1,0 +1,19 @@
+﻿@page "/"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>SQL Database Vector Search</PageTitle>
+
+<h1>SQL Database Vector Search</h1>
+<p class="mt-3">
+    How to use the native VECTOR type in <img src="/images/sqldatabase.svg" /> Azure SQL Database to perform embeddings and RAG with <img src="/images/openai.svg" /> Azure OpenAI.
+</p>
+<p>
+    This application allows to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, PDF, DOCX, TXT and MD files are supported. Vectors are saved and retrieved with Entity Framework Core using the <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a> library. Embedding and Chat Completion are integrated with <a href="https://github.com/microsoft/semantic-kernel" target="_blank">Semantic Kernel</a>.
+</p>
+
+<h3>Supported features</h3>
+<ul>
+    <li>Conversation history with question reformulation</li>
+    <li>Information about token usage</li>
+    <li>Response streaming</li>
+</ul>

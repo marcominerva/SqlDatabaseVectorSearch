@@ -1,0 +1,258 @@
+﻿@page "/ask"
+
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Chat with your data</PageTitle>
+
+<div class="card mx-auto mt-2">
+    <div class="card-body">
+
+        @foreach (var message in messages)
+        {
+            if (message.Role == "user")
+            {
+                <div class="d-flex align-items-baseline text-end justify-content-end">
+                    <div class="pe-2">
+                        <div>
+                            <div class="card card-text d-inline-block p-2 px-3 m-1">
+                                <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="position-relative avatar">
+                        <Image src="/images/user.png" class="img-fluid rounded-circle" alt="" />
+                    </div>
+                </div>
+            }
+            else if (message.Role == "assistant")
+            {
+                <div class="d-flex align-items-baseline">
+                    <div class="position-relative avatar">
+                        <Image src="/images/assistant.png" class="img-fluid rounded-circle" alt="" />
+                    </div>
+                    <div class="pe-2">
+                        <div>
+                            @if (message.Text is null)
+                            {
+                                <div class="card card-text d-inline-block p-3 px-3 m-1">
+                                    <div class="progress-chat" role="progressbar" aria-label="I'm thinking" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar-chat">
+                                            <div class="progress-bar-indeterminate"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="card card-text d-inline-block p-2 px-3 m-1">
+                                    <div>
+                                        <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                                    </div>
+                                    @if (message.IsCompleted)
+                                    {
+                                        <div class="d-flex justify-content-between">
+                                            <div class="text-start bg-transparent mt-3">
+                                                <Tooltip Title="@message.TokenUsage" IsHtml="true" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                                                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                                                </Tooltip>
+                                            </div>
+                                            <div class="text-end bg-transparent">
+                                                <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
+                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message.Text))">
+                                                        <Icon Name="IconName.Clipboard" />
+                                                    </Button>
+                                                </Tooltip>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+
+        <div @ref="chat"></div>
+    </div>
+
+    <div class="card-footer bg-white w-100 bottom-0 m-0 p-1">
+        <div class="input-group">
+            <span class="input-group-text bg-transparent border-0">
+                <Tooltip Title="Messages aren't stored in any way on either the client or the server." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                </Tooltip>
+            </span>
+            <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />
+            <div class="input-group-text bg-transparent border-0">
+                <Button Type="ButtonType.Submit" @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
+                    <Icon Name="IconName.Send" />
+                </Button>
+                <Button Type="ButtonType.Reset" @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
+                    <Icon CustomIconName="bi bi-x-lg" />
+                </Button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private Button askButton = default!;
+    private Button resetButton = default!;
+    private ElementReference askInput = default!;
+    private ElementReference chat = default!;
+
+    private IList<Message> messages = [];
+    private string? question;
+
+    private Guid conversationId = Guid.NewGuid();
+    private bool isAsking = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("setFocus", askInput);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (isAsking)
+        {
+            return;
+        }
+
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(question))
+        {
+            await AskQuestion();
+        }
+        else if (e.Key == "ArrowUp" && messages.Count >= 2)
+        {
+            question = messages[^2].Text;
+        }
+    }
+
+    private async Task AskQuestion()
+    {
+        isAsking = true;
+
+        var userQuestion = new Question(conversationId, question!);
+        var userMessage = new Message { Text = userQuestion.Text, Role = "user" };
+        messages.Add(userMessage);
+
+        var assistantMessage = new Message { Role = "assistant" };
+        messages.Add(assistantMessage);
+
+        question = null;
+        await Task.Yield();
+
+        await EnsureMessageIsVisibleAsync();
+
+        try
+        {
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
+
+            var response = vectorSearchService.AskStreamingAsync(userQuestion);
+            await foreach (var delta in response)
+            {
+                if (delta.StreamState == StreamState.Start)
+                {
+                    assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
+                }
+                else if (delta.StreamState == StreamState.Append)
+                {
+                    assistantMessage.Text += delta.Answer;
+                }
+                else if (delta.StreamState == StreamState.End)
+                {
+                    assistantMessage.IsCompleted = true;
+                    assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
+                }
+
+                await Task.Yield();
+                StateHasChanged();
+
+                await EnsureMessageIsVisibleAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            assistantMessage.Text = $"There was an error while processing the question: {ex.Message}";
+            assistantMessage.IsCompleted = true;
+        }
+        finally
+        {
+            await EnsureMessageIsVisibleAsync();
+
+            isAsking = false;
+        }
+    }
+
+    private void Reset()
+    {
+        question = null;
+        conversationId = Guid.NewGuid();
+        messages.Clear();
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    private static string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
+    {
+        if (tokenUsageResponse is null)
+        {
+            return string.Empty;
+        }
+
+        var reformulation = tokenUsageResponse.Reformulation is not null
+            ? $"<p><strong>Reformulation:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Reformulation)}</p>"
+            : string.Empty;
+
+        var embeddingTokenCount = tokenUsageResponse.EmbeddingTokenCount.HasValue
+            ? $"<p><strong>Embedding Token Count:</strong> {tokenUsageResponse.EmbeddingTokenCount}</p>"
+            : string.Empty;
+
+        var question = tokenUsageResponse.Question is not null
+            ? $"<p><strong>Question:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Question)}</p>"
+            : string.Empty;
+
+        return $"{reformulation}{embeddingTokenCount}{question}";
+
+        static string FormatTokenUsageDetails(TokenUsage? tokenUsage)
+        {
+            if (tokenUsage is null)
+            {
+                return string.Empty;
+            }
+
+            return $"Input Token Count: {tokenUsage.InputTokenCount}<br />" +
+                   $"Output Token Count: {tokenUsage.OutputTokenCount}<br />" +
+                   $"Total Token Count: {tokenUsage.TotalTokenCount}";
+        }
+    }
+
+    private async Task EnsureMessageIsVisibleAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("scrollTo", chat);
+    }
+
+    public class Message
+    {
+        public string? Text { get; set; }
+
+        public required string Role { get; set; }
+
+        public bool IsCompleted { get; set; }
+
+        public string? TokenUsage { get; set; }
+    }
+}

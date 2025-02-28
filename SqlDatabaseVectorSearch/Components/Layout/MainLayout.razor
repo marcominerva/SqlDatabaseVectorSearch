@@ -1,0 +1,61 @@
+﻿@using System.Runtime.InteropServices
+
+@inherits LayoutComponentBase
+
+<Toasts class="p-3" AutoHide="true" Placement="ToastsPlacement.TopRight" />
+
+<BlazorBootstrapLayout StickyHeader="true">
+    <HeaderSection>
+        <a href="/swagger" target="_blank" class="text-decoration-none" title="OpenAPI documentation">
+            <Icon Name="IconName.FileTypeJson" Class="ps-3 ps-lg-2" Size="IconSize.x2" Color="IconColor.Muted"></Icon>
+        </a>
+        <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch" target="_blank" class="text-decoration-none" title="View on GitHub">
+            <Icon Name="IconName.Github" Class="ps-4 ps-lg-4" Size="IconSize.x2" Color="IconColor.Muted"></Icon>
+        </a>
+    </HeaderSection>
+
+    <SidebarSection>
+        <Sidebar2 Href="/"
+                  IconName="IconName.Search"
+                  Title="SQL Vector Search"
+                  DataProvider="Sidebar2DataProvider"
+                  WidthUnit="Unit.Px" />
+    </SidebarSection>
+
+    <ContentSection>
+            @Body
+    </ContentSection>
+
+</BlazorBootstrapLayout>
+
+@code {
+    private IEnumerable<NavItem> navItems = default!;
+
+    private Task<Sidebar2DataProviderResult> Sidebar2DataProvider(Sidebar2DataProviderRequest request)
+    {
+        if (navItems is null)
+        {
+            navItems = GetNavItems();
+        }
+
+        var result = request.ApplyTo(navItems);
+        return Task.FromResult(result);
+    }
+
+    private IEnumerable<NavItem> GetNavItems()
+    {
+        navItems = [
+            new() { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All},
+            new() { Id = "2", Href= "/documents", IconName = IconName.FileText, Text = "Documents" },
+            new() { Id = "3", Href = "/ask", IconName = IconName.ChatDots, Text = "Ask"}
+        ];
+
+        return navItems;
+    }
+}
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
