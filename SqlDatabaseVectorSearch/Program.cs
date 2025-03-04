@@ -49,7 +49,10 @@ builder.Services.AddHybridCache(options =>
 
 builder.Services.ConfigureHttpClientDefaults(builder =>
 {
-    builder.AddStandardResilienceHandler();
+    builder.AddStandardResilienceHandler(options =>
+    {
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
+    });
 });
 
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
