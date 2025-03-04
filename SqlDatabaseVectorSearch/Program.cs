@@ -1,15 +1,11 @@
-using System.ComponentModel;
 using System.Net.Mime;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
-using MimeMapping;
 using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Extensions;
-using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.TextChunkers;
@@ -135,88 +131,7 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapPost("/api/ask", async (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
-    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
-{
-    var response = await vectorSearchService.AskQuestionAsync(question, reformulate, cancellationToken);
-    return TypedResults.Ok(response);
-})
-.WithSummary("Asks a question")
-.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
-.WithTags("Ask");
-
-app.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
-    [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
-{
-    async IAsyncEnumerable<QuestionResponse> Stream()
-    {
-        // Requests a streaming response.
-        var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate, cancellationToken);
-
-        await foreach (var delta in responseStream)
-        {
-            yield return delta;
-        }
-    }
-
-    return Stream();
-})
-.WithSummary("Asks a question and gets the response as streaming")
-.WithDescription("The question will be reformulated taking into account the context of the chat identified by the given ConversationId.")
-.WithTags("Ask");
-
-var documentsApiGroup = app.MapGroup("/api/documents").WithTags("Documents");
-
-documentsApiGroup.MapGet(string.Empty, async (DocumentService documentService, CancellationToken cancellationToken) =>
-{
-    var documents = await documentService.GetAsync(cancellationToken);
-    return TypedResults.Ok(documents);
-})
-.WithSummary("Gets the list of documents");
-
-documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
-    [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
-{
-    using var stream = file.OpenReadStream();
-
-    // Note: file.ContentType is not 100% reliable (for example, for markdown file).
-    var response = await vectorSearchService.ImportAsync(stream, file.FileName, MimeUtility.GetMimeMapping(file.FileName), documentId, cancellationToken);
-
-    return TypedResults.Ok(response);
-})
-.DisableAntiforgery()
-.ProducesProblem(StatusCodes.Status400BadRequest)
-.WithSummary("Uploads a document")
-.WithDescription("Uploads a document to SQL Database and saves its embedding using the native VECTOR type. The document will be indexed and used to answer questions. Currently, PDF, DOCX, TXT and MD files are supported.");
-
-documentsApiGroup.MapGet("{documentId:guid}/chunks", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
-{
-    var documents = await documentService.GetChunksAsync(documentId, cancellationToken);
-    return TypedResults.Ok(documents);
-})
-.WithSummary("Gets the list of chunks of a given document")
-.WithDescription("The list does not contain embedding. Use '/api/documents/{documentId}/chunks/{documentChunkId}' to get the embedding for a given chunk.");
-
-documentsApiGroup.MapGet("{documentId:guid}/chunks/{documentChunkId:guid}", async Task<Results<Ok<DocumentChunk>, NotFound>> (Guid documentId, Guid documentChunkId, DocumentService documentService, CancellationToken cancellationToken) =>
-{
-    var chunk = await documentService.GetChunkEmbeddingAsync(documentId, documentChunkId, cancellationToken);
-    if (chunk is null)
-    {
-        return TypedResults.NotFound();
-    }
-
-    return TypedResults.Ok(chunk);
-})
-.ProducesProblem(StatusCodes.Status404NotFound)
-.WithSummary("Gets the details of a given chunk, includings its embedding");
-
-documentsApiGroup.MapDelete("{documentId:guid}", async (Guid documentId, DocumentService documentService, CancellationToken cancellationToken) =>
-{
-    await documentService.DeleteAsync(documentId, cancellationToken);
-    return TypedResults.NoContent();
-})
-.WithSummary("Deletes a document")
-.WithDescription("This endpoint deletes the document and all its chunks.");
+app.MapEndpoints();
 
 app.Run();
 
