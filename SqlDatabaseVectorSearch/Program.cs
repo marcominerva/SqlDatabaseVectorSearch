@@ -47,9 +47,9 @@ builder.Services.AddHybridCache(options =>
     };
 });
 
-builder.Services.ConfigureHttpClientDefaults(builder =>
+builder.Services.ConfigureHttpClientDefaults(configure =>
 {
-    builder.AddStandardResilienceHandler(options =>
+    configure.AddStandardResilienceHandler(options =>
     {
         options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
     });
