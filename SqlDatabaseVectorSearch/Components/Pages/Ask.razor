@@ -163,6 +163,7 @@
             {
                 if (delta.StreamState == StreamState.Start)
                 {
+                    userMessage.Text = delta.ReformulatedQuestion;
                     assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
                 }
                 else if (delta.StreamState == StreamState.Append)
