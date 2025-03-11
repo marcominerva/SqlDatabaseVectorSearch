@@ -3,7 +3,7 @@ A repository that showcases the native VECTOR type in Azure SQL Database to perf
 
 The application allows to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, PDF, DOCX, TXT and MD files are supported. Vectors are saved and retrieved with Entity Framework Core using the [EFCore.SqlServer.VectorSearch](https://github.com/efcore/EfCore.SqlServer.VectorSearch) library. Embedding and Chat Completion are integrated with [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
 
-This repository contains a Blazor Web App as well as a Minimal API that allows to programatically interact with embeddings and RAG.
+This repository contains a Blazor Web App as well as a Minimal API that allows to programmatically interact with embeddings and RAG.
 
 ### Web App
 ![SQL Database Vector Search Web App](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_WebApp.png)
