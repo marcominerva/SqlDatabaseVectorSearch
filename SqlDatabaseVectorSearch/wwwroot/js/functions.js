@@ -10,6 +10,10 @@ window.scrollTo = (element) => {
     }
 }
 
+window.resetFileInput = (elementId) => {
+    document.getElementById(elementId).value = '';
+};
+
 function getLocalTime(utcDateTime) {
     return new Date(utcDateTime).toLocaleString();
 }

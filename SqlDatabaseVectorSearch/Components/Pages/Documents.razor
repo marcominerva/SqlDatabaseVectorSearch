@@ -13,7 +13,7 @@
     Upload new document
 </h4>
 
-<EditForm Model="Model" Enhance OnValidSubmit="HandleValidSubmit">
+<EditForm Model="Model" Enhance OnValidSubmit="UploadFile">
     <DataAnnotationsValidator />
 
     <div class="row">
@@ -24,7 +24,7 @@
                         <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
                     </Tooltip>
                 </span>
-                <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" />
+                <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
             </div>
         </div>
         <div class="col-md-5 col-sm-5 col-5">
@@ -149,7 +149,7 @@ else
         }
     }
 
-    private async Task HandleValidSubmit()
+    private async Task UploadFile()
     {
         if (Model.File is null)
         {
@@ -172,6 +172,9 @@ else
             await vectorSearchService.ImportAsync(stream, fileName, MimeUtility.GetMimeMapping(fileName), documentId);
 
             ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document {fileName} has been successfully uploaded and indexed."));
+
+            Model = new UploadDocument();
+            await JSRuntime.InvokeVoidAsync("resetFileInput", "fileInput");
 
             await LoadDocumentsAsync(scope.ServiceProvider);
         }
