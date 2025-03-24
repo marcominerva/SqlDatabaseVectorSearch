@@ -128,7 +128,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
             """);
 
-        var tokensAvailable = appSettings.MaxInputTokens
+        var availableTokens = appSettings.MaxInputTokens
                               - tokenizerService.CountChatCompletionTokens(chat[0].ToString())    // System prompt.
                               - tokenizerService.CountChatCompletionTokens(prompt.ToString()) // Initial user prompt.
                               - appSettings.MaxOutputTokens;    // To ensure there is enough space for the answer.
@@ -138,7 +138,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             var text = $"---{Environment.NewLine}{chunk}";
 
             var tokenCount = tokenizerService.CountChatCompletionTokens(text);
-            if (tokenCount > tokensAvailable)
+            if (tokenCount > availableTokens)
             {
                 // There isn't enough space to add the current chunk.
                 break;
@@ -146,8 +146,8 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
             prompt.Append(text);
 
-            tokensAvailable -= tokenCount;
-            if (tokensAvailable <= 0)
+            availableTokens -= tokenCount;
+            if (availableTokens <= 0)
             {
                 // There isn't enough space to add more chunks.
                 break;
