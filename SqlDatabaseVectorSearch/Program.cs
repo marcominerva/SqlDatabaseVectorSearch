@@ -124,9 +124,7 @@ app.UseSwaggerUI(options =>
 });
 
 app.UseRouting();
-// app.UseRateLimiter();
 app.UseRequestLocalization();
-// app.UseCors();
 
 app.UseAntiforgery();
 
