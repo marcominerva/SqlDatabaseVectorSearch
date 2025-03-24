@@ -36,15 +36,15 @@ This repository contains a Blazor Web App as well as a Minimal API that allows t
   "streamState": null,
   "tokenUsage": {
     "reformulation": {
-      "inputTokenCount": 107,
-      "outputTokenCount": 10,
-      "totalTokenCount": 117
+      "promptTokens": 107,
+      "completionTokens": 10,
+      "totalTokens": 117
     },
     "embeddingTokenCount": 10,
     "question": {
-      "inputTokenCount": 9142,
-      "outputTokenCount": 53,
-      "totalTokenCount": 9195
+      "promptTokens": 9142,
+      "completionTokens": 53,
+      "totalTokens": 9195
     }
   }
 }
@@ -63,9 +63,9 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
     "streamState": "Start",
     "tokenUsage": {
       "reformulation": {
-        "inputTokenCount": 107,
-        "outputTokenCount": 10,
-        "totalTokenCount": 117
+        "promptTokens": 107,
+        "completionTokens": 10,
+        "totalTokens": 117
       },
       "embeddingTokenCount": 10,
       "question": null
@@ -130,9 +130,9 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
       "reformulation": null,
       "embeddingTokenCount": null,
       "question": {
-        "inputTokenCount": 8986,
-        "outputTokenCount": 31,
-        "totalTokenCount": 9017
+        "promptTokens": 8986,
+        "completionTokens": 31,
+        "totalTokens": 9017
       }
     }
   }
