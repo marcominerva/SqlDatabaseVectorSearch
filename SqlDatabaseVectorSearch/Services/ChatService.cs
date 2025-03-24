@@ -10,7 +10,7 @@ using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class ChatService(IChatCompletionService chatCompletionService, TokenizerService tokenizerService, HybridCache cache, IOptions<AppSettings> appSettingsOptions)
+public class ChatService(IChatCompletionService chatCompletionService, TokenizerService tokenizerService, HybridCache cache, IOptions<AppSettings> appSettingsOptions, ILogger<ChatService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -36,6 +36,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         await UpdateCacheAsync(conversationId, chat, cancellationToken);
 
         var tokenUsage = GetTokenUsage(reformulatedQuestion);
+        logger.LogDebug("Reformulation: {TokenUsage}", tokenUsage);
 
         return new(reformulatedQuestion.Content!, tokenUsage);
     }
@@ -53,6 +54,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         await SetChatHistoryAsync(conversationId, question, answer.Content!, cancellationToken);
 
         var tokenUsage = GetTokenUsage(answer);
+        logger.LogDebug("Ask question: {TokenUsage}", tokenUsage);
 
         return new(answer.Content!, tokenUsage);
     }
@@ -78,6 +80,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
                 var tokenUsage = GetTokenUsage(token);
                 if (tokenUsage is not null)
                 {
+                    logger.LogDebug("Ask streaming: {TokenUsage}", tokenUsage);
                     yield return new(null, tokenUsage);
                 }
             }

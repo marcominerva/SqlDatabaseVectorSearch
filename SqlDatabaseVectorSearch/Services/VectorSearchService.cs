@@ -47,7 +47,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             // Save the document chunks and the corresponding embedding in the database.
             foreach (var (index, paragraph) in paragraphs.Index())
             {
-                logger.LogInformation("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
+                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
 
                 var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
                 dbContext.DocumentChunks.Add(documentChunk);
@@ -103,7 +103,9 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
     {
         // Reformulate the question taking into account the context of the chat to perform keyword search and embeddings.
         var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text, cancellationToken) : new(question.Text);
+
         var embeddingTokenCount = tokenizerService.CountEmbeddingTokens(reformulatedQuestion.Text!);
+        logger.LogDebug("Embedding Token Count: {EmbeddingTokenCount}", embeddingTokenCount);
 
         // Perform Vector Search on SQL Database.
         var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);

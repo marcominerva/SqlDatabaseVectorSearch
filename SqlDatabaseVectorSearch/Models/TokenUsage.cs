@@ -1,6 +1,6 @@
 ﻿namespace SqlDatabaseVectorSearch.Models;
 
-public record class TokenUsage(int InputTokenCount, int OutputTokenCount)
+public record class TokenUsage(int PromptTokens, int CompletionTokens)
 {
-    public int TotalTokenCount => InputTokenCount + OutputTokenCount;
+    public int TotalTokens => PromptTokens + CompletionTokens;
 }

@@ -235,9 +235,9 @@
                 return string.Empty;
             }
 
-            return $"Input Token Count: {tokenUsage.InputTokenCount}<br />" +
-                   $"Output Token Count: {tokenUsage.OutputTokenCount}<br />" +
-                   $"Total Token Count: {tokenUsage.TotalTokenCount}";
+            return $"Prompt tokens: {tokenUsage.PromptTokens}<br />" +
+                   $"Completion tokens: {tokenUsage.CompletionTokens}<br />" +
+                   $"Total tokens: {tokenUsage.TotalTokens}";
         }
     }
 
