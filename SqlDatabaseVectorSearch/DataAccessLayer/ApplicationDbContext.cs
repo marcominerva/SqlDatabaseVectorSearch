@@ -1,5 +1,6 @@
 ﻿using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer;
 using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.DataAccessLayer;
@@ -9,6 +10,28 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<Document> Documents { get; set; }
 
     public virtual DbSet<DocumentChunk> DocumentChunks { get; set; }
+
+    public async Task EnsureFullTextSearchAsync()
+    {
+        await Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'DocumentSearch')
+            BEGIN
+                CREATE FULLTEXT CATALOG DocumentSearch AS DEFAULT;
+            END");
+
+        await Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (
+                SELECT 1 
+                FROM sys.fulltext_indexes i
+                JOIN sys.tables t ON i.object_id = t.object_id
+                WHERE t.name = 'DocumentChunks'
+            )
+            BEGIN
+                CREATE FULLTEXT INDEX ON DocumentChunks(Content)
+                KEY INDEX PK_DocumentChunks
+                WITH STOPLIST = SYSTEM;
+            END");
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

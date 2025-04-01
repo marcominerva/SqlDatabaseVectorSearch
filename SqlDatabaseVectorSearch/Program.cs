@@ -55,12 +55,14 @@ builder.Services.ConfigureHttpClientDefaults(configure =>
         options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(2);
     });
 });
-
+#pragma warning disable SKEXP0070
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
 builder.Services.AddKernel()
-    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
-    .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
+    .AddGoogleAIGeminiChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.ApiKey)
+    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint,
+        aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions);
+    #pragma warning restore SKEXP0070
 
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
@@ -143,4 +145,5 @@ static async Task ConfigureDatabaseAsync(IServiceProvider serviceProvider)
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
     await dbContext.Database.MigrateAsync();
+    await dbContext.EnsureFullTextSearchAsync();
 }

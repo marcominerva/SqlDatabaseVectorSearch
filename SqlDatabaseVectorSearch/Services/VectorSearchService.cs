@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.Embeddings;
@@ -62,43 +63,6 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         return new(document.Id, tokenCount);
     }
 
-    public async Task<QuestionResponse> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
-    {
-        // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
-        var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
-
-        var (answer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
-
-        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage));
-    }
-
-    public async IAsyncEnumerable<QuestionResponse> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
-        var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
-
-        var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken: cancellationToken);
-
-        // The first message contains the question and the corresponding token usage (if reformulated).
-        yield return new(question.Text, reformulatedQuestion.Text!, null, StreamState.Start, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null));
-
-        TokenUsageResponse? tokenUsageResponse = null;
-
-        // Return each token as a partial response.
-        await foreach (var (token, tokenUsage) in answerStream)
-        {
-            // Token usage is expected in the last message.
-            tokenUsageResponse = tokenUsage is not null ? new(tokenUsage) : null;
-            yield return new(token, tokenUsageResponse is null ? StreamState.Append : StreamState.End, tokenUsageResponse);
-        }
-
-        // If the token usage has not been returned in the last message, we must explicitly tells that the stream is ended.
-        if (tokenUsageResponse is null)
-        {
-            yield return new(null, StreamState.End);
-        }
-    }
-
     private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<string> Chunks)> CreateContextAsync(Question question, bool reformulate, CancellationToken cancellationToken)
     {
         // Reformulate the question taking into account the context of the chat to perform keyword search and embeddings.
@@ -107,15 +71,28 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         var embeddingTokenCount = tokenizerService.CountEmbeddingTokens(reformulatedQuestion.Text!);
         logger.LogDebug("Embedding Token Count: {EmbeddingTokenCount}", embeddingTokenCount);
 
-        // Perform Vector Search on SQL Database.
+        // Generate embedding for vector search
         var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
 
-        var chunks = await dbContext.DocumentChunks
-                    .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-                    .Select(c => c.Content)
-                    .Take(appSettings.MaxRelevantChunks)
-                    .ToListAsync(cancellationToken);
+        // Perform full-text search
+        var fulltextChunks = await dbContext.DocumentChunks
+            .Where(c => EF.Functions.FreeText(c.Content, reformulatedQuestion.Text!))
+            .Take(appSettings.MaxRelevantChunks)
+            .ToListAsync(cancellationToken);
 
-        return (reformulatedQuestion, embeddingTokenCount, chunks);
+        // Perform vector similarity search
+        var vectorChunks = await dbContext.DocumentChunks
+            .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
+            .Take(appSettings.MaxRelevantChunks)
+            .ToListAsync(cancellationToken);
+
+        //Combine results with unique Ids
+        var combinedChunks = fulltextChunks
+            .Union(vectorChunks)
+            .DistinctBy(c => c.Id)
+            .Select(c => c.Content)
+            .ToList();
+        
+        return (reformulatedQuestion, embeddingTokenCount, combinedChunks);
     }
 }
