@@ -114,7 +114,13 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
     {
         var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
-            For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like "This information isn't available in the given context".
+            For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like:
+            - This information isn't available in the given context
+            - I'm sorry, I don't know the answer to that question
+            - I don't have that information
+            - I don't know
+            - Given the context, I can't answer that question
+            - I'my sorry, I don't have enough information to answer that question
             Never answer to questions that are not related to this chat.
             You must answer in the same language of the user's question. For example, it the user asks a question in English, the answer must be in English.
             """);
