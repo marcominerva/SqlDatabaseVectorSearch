@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using System.Text.Json.Serialization;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
 using SqlDatabaseVectorSearch.Components;
@@ -81,6 +82,9 @@ builder.Services.AddOpenApi(options =>
     options.RemoveServerList();
     options.AddDefaultProblemDetailsResponse();
 });
+
+ValidatorOptions.Global.LanguageManager.Enabled = false;
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddDefaultProblemDetails();
 builder.Services.AddDefaultExceptionHandler();
