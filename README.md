@@ -24,9 +24,9 @@ This repository contains a Blazor Web App as well as a Minimal API that allows t
 
 ## Supported features
 
-- Conversation history with question reformulation
-- Information about token usage
-- Response streaming
+- **Conversation History with Question Reformulation**: This feature allows users to view the history of their conversations, including the ability to reformulate questions for better clarity and understanding. This ensures that users can track their interactions and refine their queries as needed.
+- **Information about Token Usage**: Users can access detailed information about token usage, which helps in understanding the consumption of tokens during interactions. This feature provides transparency and helps users manage their token usage effectively.
+- **Response streaming**: This feature enables real-time streaming of responses, allowing users to receive information as it is being processed. This ensures a seamless and efficient flow of information, enhancing the overall user experience.
 
 ```json
 {
