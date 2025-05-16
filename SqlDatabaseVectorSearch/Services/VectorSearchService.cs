@@ -1,18 +1,19 @@
 ﻿using System.Data;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Embeddings;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.DataAccessLayer;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.TextChunkers;
+using ChatResponse = SqlDatabaseVectorSearch.Models.ChatResponse;
 using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, ITextEmbeddingGenerationService textEmbeddingGenerationService, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -42,14 +43,15 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             // Split the content into chunks and generate the embeddings for each one.
             var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
             var paragraphs = textChunker.Split(content);
-            var embeddings = await textEmbeddingGenerationService.GenerateEmbeddingsAsync(paragraphs, cancellationToken: cancellationToken);
+
+            var embeddings = await embeddingGenerator.GenerateAndZipAsync(paragraphs, cancellationToken: cancellationToken);
 
             // Save the document chunks and the corresponding embedding in the database.
-            foreach (var (index, paragraph) in paragraphs.Index())
+            foreach (var (index, embedding) in embeddings.Index())
             {
-                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph));
+                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(embedding.Value));
 
-                var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = paragraph!, Embedding = embeddings[index].ToArray() };
+                var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = embedding.Value, Embedding = embedding.Embedding.Vector.ToArray() };
                 dbContext.DocumentChunks.Add(documentChunk);
             }
 
@@ -108,7 +110,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         logger.LogDebug("Embedding Token Count: {EmbeddingTokenCount}", embeddingTokenCount);
 
         // Perform Vector Search on SQL Database.
-        var questionEmbedding = await textEmbeddingGenerationService.GenerateEmbeddingAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
+        var questionEmbedding = await embeddingGenerator.GenerateVectorAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
 
         var chunks = await dbContext.DocumentChunks
                     .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))

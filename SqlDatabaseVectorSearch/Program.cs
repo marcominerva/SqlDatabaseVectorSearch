@@ -60,8 +60,8 @@ builder.Services.ConfigureHttpClientDefaults(configure =>
 // Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
 // so that embeddings themselves can be generated more accurately.
 builder.Services.AddKernel()
-    .AddAzureOpenAITextEmbeddingGeneration(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, dimensions: aiSettings.Embedding.Dimensions)
-    .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey);
+    .AddAzureOpenAIEmbeddingGenerator(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, modelId: aiSettings.Embedding.ModelId, dimensions: aiSettings.Embedding.Dimensions)
+    .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey, modelId: aiSettings.ChatCompletion.ModelId);
 
 builder.Services.AddSingleton<TokenizerService>();
 builder.Services.AddSingleton<ChatService>();
