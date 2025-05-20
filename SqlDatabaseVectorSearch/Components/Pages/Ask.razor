@@ -60,7 +60,14 @@
                                             <div class="text-end bg-transparent">
                                                 <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
                                                     <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message.Text))">
-                                                        <Icon Name="IconName.Clipboard" />
+                                                        @if (isCopied)
+                                                        {
+                                                            <Icon Name="IconName.Check" Class="text-success" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <Icon Name="IconName.Clipboard" />
+                                                        }
                                                     </Button>
                                                 </Tooltip>
                                             </div>
@@ -109,6 +116,7 @@
 
     private Guid conversationId = Guid.NewGuid();
     private bool isAsking = false;
+    private bool isCopied = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -204,7 +212,18 @@
 
     private async Task CopyToClipboardAsync(string text)
     {
+        if (text is null)
+            return;
+
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+
+        isCopied = true;
+        StateHasChanged();
+
+        await Task.Delay(1500); // Mostra il segno di spunta per 1.5 secondi
+
+        isCopied = false;
+        StateHasChanged();
     }
 
     private static string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
