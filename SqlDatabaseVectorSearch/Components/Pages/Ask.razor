@@ -58,7 +58,7 @@
                                                 </Tooltip>
                                             </div>
                                             <div class="text-end bg-transparent">
-                                                <Tooltip Title="Copy to Clipboard" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
+                                                <Tooltip Title="@toolTipText" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
                                                     <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message.Text))">
                                                         @if (isCopied)
                                                         {
@@ -116,7 +116,9 @@
 
     private Guid conversationId = Guid.NewGuid();
     private bool isAsking = false;
+
     private bool isCopied = false;
+    private string toolTipText = "Copy to Clipboard";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -218,10 +220,12 @@
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
 
         isCopied = true;
+        toolTipText = "Copied!";
         StateHasChanged();
 
-        await Task.Delay(1500); // Mostra il segno di spunta per 1.5 secondi
+        await Task.Delay(1500); // Shows the checkmark for 1.5 seconds
 
+        toolTipText = "Copy to Clipboard";
         isCopied = false;
         StateHasChanged();
     }
