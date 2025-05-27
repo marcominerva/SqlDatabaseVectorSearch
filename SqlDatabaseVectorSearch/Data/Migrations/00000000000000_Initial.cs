@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace SqlDatabaseVectorSearch.DataAccessLayer.Migrations
+namespace SqlDatabaseVectorSearch.Data.Migrations
 {
     /// <inheritdoc />
     public partial class Initial : Migration

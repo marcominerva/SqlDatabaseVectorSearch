@@ -1,24 +1,33 @@
-﻿using System.Text;
+﻿using SqlDatabaseVectorSearch.TextChunkers;
 using UglyToad.PdfPig;
-using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.PageSegmenter;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
 namespace SqlDatabaseVectorSearch.ContentDecoders;
 
-public class PdfContentDecoder : IContentDecoder
+public class PdfContentDecoder(IServiceProvider serviceProvider) : IContentDecoder
 {
-    public Task<string> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<Chunk>> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
     {
-        var content = new StringBuilder();
+        var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
 
         // Read the content of the PDF document.
         using var pdfDocument = PdfDocument.Open(stream);
+        var paragraphs = pdfDocument.GetPages().SelectMany(page => GetPageParagraphs(page, textChunker)).ToList();
 
-        foreach (var page in pdfDocument.GetPages().Where(x => x is not null))
-        {
-            var pageContent = ContentOrderTextExtractor.GetText(page) ?? string.Empty;
-            content.AppendLine(pageContent);
-        }
+        return Task.FromResult(paragraphs.AsEnumerable());
+    }
 
-        return Task.FromResult(content.ToString());
+    private static IEnumerable<Chunk> GetPageParagraphs(Page pdfPage, ITextChunker textChunker)
+    {
+        var letters = pdfPage.Letters;
+        var words = NearestNeighbourWordExtractor.Instance.GetWords(letters);
+        var textBlocks = DocstrumBoundingBoxes.Instance.GetBlocks(words);
+        var pageText = string.Join($"{Environment.NewLine}{Environment.NewLine}", textBlocks.Select(t => t.Text.ReplaceLineEndings(" ")));
+
+        var paragraphs = textChunker.Split(pageText);
+
+        return paragraphs.Select((text, index) => new Chunk(pdfPage.Number, index, text));
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace SqlDatabaseVectorSearch.DataAccessLayer.Entities;
+﻿namespace SqlDatabaseVectorSearch.Data.Entities;
 
 public class DocumentChunk
 {

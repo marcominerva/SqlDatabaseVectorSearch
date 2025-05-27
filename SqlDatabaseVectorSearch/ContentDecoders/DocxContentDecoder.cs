@@ -6,7 +6,7 @@ namespace SqlDatabaseVectorSearch.ContentDecoders;
 
 public class DocxContentDecoder : IContentDecoder
 {
-    public Task<string> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
+    public Task<IEnumerable<Chunk>> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
     {
         // Open a Word document for read-only access.
         using var document = WordprocessingDocument.Open(stream, false);
@@ -20,6 +20,6 @@ public class DocxContentDecoder : IContentDecoder
             content.AppendLine(p.InnerText);
         }
 
-        return Task.FromResult(content.ToString());
+        return Task.FromResult(new List<Chunk>([new(1, 0, content.ToString())]).AsEnumerable());
     }
 }

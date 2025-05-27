@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
 using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
-using SqlDatabaseVectorSearch.DataAccessLayer;
+using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Extensions;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;

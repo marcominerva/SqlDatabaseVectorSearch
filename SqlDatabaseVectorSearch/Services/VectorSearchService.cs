@@ -4,12 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using SqlDatabaseVectorSearch.ContentDecoders;
-using SqlDatabaseVectorSearch.DataAccessLayer;
+using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
-using SqlDatabaseVectorSearch.TextChunkers;
 using ChatResponse = SqlDatabaseVectorSearch.Models.ChatResponse;
-using Entities = SqlDatabaseVectorSearch.DataAccessLayer.Entities;
+using Entities = SqlDatabaseVectorSearch.Data.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
@@ -21,10 +20,10 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
     {
         // Extract the contents of the file.
         var decoder = serviceProvider.GetKeyedService<IContentDecoder>(contentType) ?? throw new NotSupportedException($"Content type '{contentType}' is not supported.");
-        var content = await decoder.DecodeAsync(stream, contentType, cancellationToken);
+        var paragraphs = await decoder.DecodeAsync(stream, contentType, cancellationToken);
 
         // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
-        var tokenCount = tokenizerService.CountEmbeddingTokens(content);
+        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(string.Empty, paragraphs.Select(p => p.Content)));
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
         var document = await strategy.ExecuteAsync(async (cancellationToken) =>
@@ -40,11 +39,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
             dbContext.Documents.Add(document);
 
-            // Split the content into chunks and generate the embeddings for each one.
-            var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
-            var paragraphs = textChunker.Split(content);
-
-            var embeddings = await embeddingGenerator.GenerateAndZipAsync(paragraphs, cancellationToken: cancellationToken);
+            var embeddings = await embeddingGenerator.GenerateAndZipAsync(paragraphs.Select(p => p.Content), cancellationToken: cancellationToken);
 
             // Save the document chunks and the corresponding embedding in the database.
             foreach (var (index, embedding) in embeddings.Index())
