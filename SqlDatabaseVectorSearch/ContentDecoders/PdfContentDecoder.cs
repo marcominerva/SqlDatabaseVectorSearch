@@ -28,6 +28,6 @@ public class PdfContentDecoder(IServiceProvider serviceProvider) : IContentDecod
 
         var paragraphs = textChunker.Split(pageText);
 
-        return paragraphs.Select((text, index) => new Chunk(pdfPage.Number, index, text));
+        return paragraphs.Where(p => !string.IsNullOrWhiteSpace(p)).Select((text, index) => new Chunk(pdfPage.Number, index, text));
     }
 }
