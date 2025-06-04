@@ -1,12 +1,17 @@
-﻿namespace SqlDatabaseVectorSearch.ContentDecoders;
+﻿using SqlDatabaseVectorSearch.TextChunkers;
 
-public class TextContentDecoder : IContentDecoder
+namespace SqlDatabaseVectorSearch.ContentDecoders;
+
+public class TextContentDecoder(IServiceProvider serviceProvider) : IContentDecoder
 {
     public async Task<IEnumerable<Chunk>> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default)
     {
+        var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
+
         using var readStream = new StreamReader(stream);
         var content = await readStream.ReadToEndAsync(cancellationToken);
 
-        return [new(1, 0, content)];
+        var paragraphs = textChunker.Split(content);
+        return paragraphs.Select((text, index) => new Chunk(1, index, text)).ToList();
     }
 }

@@ -23,7 +23,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         var paragraphs = await decoder.DecodeAsync(stream, contentType, cancellationToken);
 
         // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
-        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(string.Empty, paragraphs.Select(p => p.Content)));
+        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", paragraphs.Select(p => p.Content)));
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
         var document = await strategy.ExecuteAsync(async (cancellationToken) =>
@@ -59,7 +59,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         return new(document.Id, tokenCount);
     }
 
-    public async Task<QuestionResponse> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
+    public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
     {
         // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
         var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
@@ -69,7 +69,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage));
     }
 
-    public async IAsyncEnumerable<QuestionResponse> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
         var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
