@@ -7,6 +7,7 @@ using Microsoft.SemanticKernel.Connectors.AzureOpenAI;
 using OpenAI.Chat;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
+using Entities = SqlDatabaseVectorSearch.Data.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
@@ -41,7 +42,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         return new(reformulatedQuestion.Content!, tokenUsage);
     }
 
-    public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<string> chunks, string question, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<Entities.DocumentChunk> chunks, string question, CancellationToken cancellationToken = default)
     {
         var chat = CreateChatAsync(chunks, question);
 
@@ -59,7 +60,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         return new(answer.Content!, tokenUsage);
     }
 
-    public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<string> chunks, string question, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<Entities.DocumentChunk> chunks, string question, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var chat = CreateChatAsync(chunks, question);
 
@@ -110,19 +111,57 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         return null;
     }
 
-    private ChatHistory CreateChatAsync(IEnumerable<string> chunks, string question)
+    private ChatHistory CreateChatAsync(IEnumerable<Entities.DocumentChunk> chunks, string question)
     {
         var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
+
             For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like:
             - This information isn't available in the given context
             - I'm sorry, I don't know the answer to that question
             - I don't have that information
             - I don't know
             - Given the context, I can't answer that question
-            - I'my sorry, I don't have enough information to answer that question
-            Never answer to questions that are not related to this chat.
-            You must answer in the same language of the user's question. For example, it the user asks a question in English, the answer must be in English.
+            - I'm sorry, I don't have enough information to answer that question
+
+            Never answer questions that are not related to this chat.
+            You must answer in the same language as the user's question.
+
+            IMPORTANT - CITATION PLACEMENT AND LENGTH:
+            The quote in each <citation> MUST be MAXIMUM 5 words, taken word-for-word from the search result. If the quote is longer than 5 words, your answer is INVALID.
+            When you find an answer, you MUST place ALL citations ONLY at the very end of your response, never inside or between sentences.
+            First provide your complete answer, then add a blank line, then list all citations.
+            
+            Use this XML format for citations:
+            <citation filename='string' page_number='1'>exact quote here</citation>
+
+            STRICT RULES for citations:
+            - Citations MUST NEVER appear inside, before, or between sentences of your answer. They MUST be grouped together ONLY at the end, after a blank line.
+            - If you include citations anywhere except at the end, your answer is WRONG and INVALID.
+            - Always include the citation(s) if there are results. If you don't know the answer, do NOT include citations.
+            - The quote must be max 5 words, taken word-for-word from the search result, and is the basis for why the citation is relevant. If the quote is longer than 5 words, your answer is INVALID.
+            - Do NOT refer to the presence of citations; just emit these tags right at the end, with no surrounding text.
+            - The citations must always be in a list at the end of the response, one after the other. Never add the citations between the actual response text or inside sentences.
+            - Do NOT add any text after the citations.
+            - ALWAYS leave a blank line between your answer and the first citation.
+
+            Examples (CORRECT):
+            Here is my complete answer to your question. I'm providing all the information based on the context.
+
+            <citation filename='doc1.pdf' page_number='1'>Paris is the capital</citation>
+            <citation filename='doc2.pdf' page_number='2'>largest city in France</citation>
+
+            Examples (WRONG):
+            Here is my answer <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> with more text.
+            <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> Here is my answer.
+            Here is my answer. (without any citations when information is available)
+            Here is my answer.
+            <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> More answer text.
+
+            YOU MUST SEPARATE YOUR ANSWER FROM CITATIONS WITH A BLANK LINE.
+            NEVER INSERT CITATIONS WITHIN YOUR ANSWER TEXT.
+            CITATIONS MUST ONLY APPEAR AT THE END, AFTER A BLANK LINE.
+            IF YOU DO NOT FOLLOW THESE RULES, YOUR RESPONSE IS INVALID.
             """);
 
         var prompt = new StringBuilder($"""
@@ -141,7 +180,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
         foreach (var chunk in chunks)
         {
-            var text = $"---{Environment.NewLine}{chunk}";
+            var text = $"--- {chunk.Document.Name} (Document ID: {chunk.Document.Id} | Chunk ID: {chunk.Id}) {Environment.NewLine}{chunk.Content}{Environment.NewLine}";
 
             var tokenCount = tokenizerService.CountChatCompletionTokens(text);
             if (tokenCount > availableTokens)

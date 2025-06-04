@@ -96,7 +96,7 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         }
     }
 
-    private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<string> Chunks)> CreateContextAsync(Question question, bool reformulate, CancellationToken cancellationToken)
+    private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<Entities.DocumentChunk> Chunks)> CreateContextAsync(Question question, bool reformulate, CancellationToken cancellationToken)
     {
         // Reformulate the question taking into account the context of the chat to perform keyword search and embeddings.
         var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text, cancellationToken) : new(question.Text);
@@ -107,9 +107,8 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         // Perform Vector Search on SQL Database.
         var questionEmbedding = await embeddingGenerator.GenerateVectorAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
 
-        var chunks = await dbContext.DocumentChunks
+        var chunks = await dbContext.DocumentChunks.Include(c => c.Document)
                     .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
-                    .Select(c => c.Content)
                     .Take(appSettings.MaxRelevantChunks)
                     .ToListAsync(cancellationToken);
 
