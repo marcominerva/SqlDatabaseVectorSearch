@@ -144,24 +144,6 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             - The citations must always be in a list at the end of the response, one after the other. Never add the citations between the actual response text or inside sentences.
             - Do NOT add any text after the citations.
             - ALWAYS leave a blank line between your answer and the first citation.
-
-            Examples (CORRECT):
-            Here is my complete answer to your question. I'm providing all the information based on the context.
-
-            <citation filename='doc1.pdf' page_number='1'>Paris is the capital</citation>
-            <citation filename='doc2.pdf' page_number='2'>largest city in France</citation>
-
-            Examples (WRONG):
-            Here is my answer <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> with more text.
-            <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> Here is my answer.
-            Here is my answer. (without any citations when information is available)
-            Here is my answer.
-            <citation filename='doc1.pdf' page_number='1'>Paris is the capital of France and is known for the Eiffel Tower</citation> More answer text.
-
-            YOU MUST SEPARATE YOUR ANSWER FROM CITATIONS WITH A BLANK LINE.
-            NEVER INSERT CITATIONS WITHIN YOUR ANSWER TEXT.
-            CITATIONS MUST ONLY APPEAR AT THE END, AFTER A BLANK LINE.
-            IF YOU DO NOT FOLLOW THESE RULES, YOUR RESPONSE IS INVALID.
             """);
 
         var prompt = new StringBuilder($"""
