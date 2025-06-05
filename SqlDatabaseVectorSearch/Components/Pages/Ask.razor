@@ -314,18 +314,20 @@
             return (text ?? string.Empty, citations);
         }
 
-        var pattern = "<citation\\s+filename='([^']*)'\\s+page_number='([^']*)'>(.*?)<\\/citation>";
+        var pattern = @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'>\s*(?<quote>.*?)\s*</citation>";
 
         var matches = Regex.Matches(text, pattern, RegexOptions.Singleline);
         foreach (Match match in matches)
         {
-            if (match.Success && match.Groups.Count == 4)
+            if (match.Success)
             {
                 citations.Add(new Citation
                 {
-                    FileName = match.Groups[1].Value,
-                    PageNumber = match.Groups[2].Value,
-                    Quote = match.Groups[3].Value
+                    DocumentId = Guid.Parse(match.Groups["documentId"].Value),
+                    ChunkId = Guid.Parse(match.Groups["chunkId"].Value),
+                    FileName = match.Groups["filename"].Value,
+                    PageNumber = match.Groups["pageNumber"].Value,
+                    Quote = match.Groups["quote"].Value
                 });
             }
         }
@@ -358,10 +360,14 @@
 
     public class Citation
     {
+        public Guid DocumentId { get; set; }
+
+        public Guid ChunkId { get; set; }
+
         public string FileName { get; set; } = null!;
 
         public string Quote { get; set; } = null!;
 
-        public string PageNumber { get; set; } = null!;
+        public string? PageNumber { get; set; }
     }
 }

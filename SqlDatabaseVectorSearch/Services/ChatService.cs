@@ -133,7 +133,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             First provide your complete answer, then add a blank line, then list all citations.
             
             Use this XML format for citations:
-            <citation filename='string' page_number='1'>exact quote here</citation>
+            <citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='1'>exact quote here</citation>
 
             STRICT RULES for citations:
             - Citations MUST NEVER appear inside, before, or between sentences of your answer. They MUST be grouped together ONLY at the end, after a blank line.
@@ -162,7 +162,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
         foreach (var chunk in chunks)
         {
-            var text = $"--- {chunk.Document.Name} (Document ID: {chunk.Document.Id} | Chunk ID: {chunk.Id}) {Environment.NewLine}{chunk.Content}{Environment.NewLine}";
+            var text = $"--- {chunk.Document.Name} (Document ID: {chunk.Document.Id} | Chunk ID: {chunk.Id} | Page Number: 1) {Environment.NewLine}{chunk.Content}{Environment.NewLine}";
 
             var tokenCount = tokenizerService.CountChatCompletionTokens(text);
             if (tokenCount > availableTokens)
