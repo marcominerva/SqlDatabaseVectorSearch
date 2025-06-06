@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -51,13 +52,15 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             MaxTokens = appSettings.MaxOutputTokens
         }, cancellationToken: cancellationToken);
 
-        // Add question and answer to the chat history.
-        await SetChatHistoryAsync(conversationId, question, answer.Content!, cancellationToken);
+        var (cleanText, citations) = ExtractCitations(answer.Content);
+
+        // Add question and clean answer (without citations) to the chat history
+        await SetChatHistoryAsync(conversationId, question, cleanText, cancellationToken);
 
         var tokenUsage = GetTokenUsage(answer);
         logger.LogDebug("Ask question: {TokenUsage}", tokenUsage);
 
-        return new(answer.Content!, tokenUsage);
+        return new(cleanText, tokenUsage, citations);
     }
 
     public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<Entities.DocumentChunk> chunks, string question, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -65,6 +68,14 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         var chat = CreateChatAsync(chunks, question);
 
         var answer = new StringBuilder();
+        
+        // Keep track of entire text to detect citation tags across tokens
+        var runningText = new StringBuilder();
+        
+        // State variables for citation detection
+        var insideCitationTag = false;
+        var currentToken = string.Empty;
+
         await foreach (var token in chatCompletionService.GetStreamingChatMessageContentsAsync(chat, new AzureOpenAIPromptExecutionSettings
         {
             MaxTokens = appSettings.MaxOutputTokens
@@ -72,23 +83,106 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         {
             if (!string.IsNullOrEmpty(token.Content))
             {
-                yield return new(token.Content);
-                answer.Append(token.Content);
+                currentToken = token.Content;
+                answer.Append(currentToken);
+                runningText.Append(currentToken);
+                
+                var runningTextString = runningText.ToString();
+                
+                // Check for citation tags in the accumulated text
+                var openTagPosition = runningTextString.LastIndexOf("<citation", StringComparison.OrdinalIgnoreCase);
+                var closeTagPosition = -1;
+                
+                if (openTagPosition >= 0)
+                {
+                    // We found an opening tag
+                    closeTagPosition = runningTextString.IndexOf("</citation>", openTagPosition, StringComparison.OrdinalIgnoreCase);
+                    
+                    if (closeTagPosition < 0)
+                    {
+                        // We are inside a citation tag but haven't found the closing tag yet
+                        insideCitationTag = true;
+                    }
+                }
+                
+                // If we're not inside a citation tag or this token doesn't contain citation tag parts,
+                // send it to the UI
+                if (!insideCitationTag && !currentToken.Contains("<citation", StringComparison.OrdinalIgnoreCase) && 
+                    !currentToken.Contains("</citation>", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Check if the current token is part of a citation tag that started in previous tokens
+                    if (openTagPosition >= 0 && 
+                        runningTextString.Length - currentToken.Length <= openTagPosition)
+                    {
+                        // Skip this token as it's part of a citation tag
+                    }
+                    else
+                    {
+                        // Send the token to the UI if it's not part of a citation tag
+                        yield return new(currentToken);
+                    }
+                }
+                
+                // If we find a closing tag in this iteration, reset the state
+                if (closeTagPosition >= 0)
+                {
+                    insideCitationTag = false;
+                }
             }
             else if (token.Content is null)
             {
                 // Token usage is returned in the last message, when the Content is null.
                 var tokenUsage = GetTokenUsage(token);
+
+                // Always process the final answer to extract citations
+                var (cleanText, citations) = ExtractCitations(answer.ToString());
+
                 if (tokenUsage is not null)
                 {
                     logger.LogDebug("Ask streaming: {TokenUsage}", tokenUsage);
-                    yield return new(null, tokenUsage);
                 }
+
+                yield return new(null, tokenUsage, citations);
             }
         }
 
-        // Add question and answer to the chat history.
-        await SetChatHistoryAsync(conversationId, question, answer.ToString(), cancellationToken);
+        // Process the final answer to extract citations and clean the text
+        var (finalCleanText, _) = ExtractCitations(answer.ToString());
+        
+        // Add question and clean answer to the chat history
+        await SetChatHistoryAsync(conversationId, question, finalCleanText, cancellationToken);
+    }
+
+    private static (string cleanText, IEnumerable<Citation> citations) ExtractCitations(string? text)
+    {
+        var citations = new List<Citation>();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return (text ?? string.Empty, citations);
+        }
+
+        var pattern = @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'\s+index-on-page='(?<indexOnPage>[^']*)'>\s*(?<quote>.*?)\s*</citation>";
+
+        var matches = Regex.Matches(text, pattern, RegexOptions.Singleline);
+        foreach (Match match in matches)
+        {
+            if (match.Success)
+            {
+                citations.Add(new Citation(
+                    DocumentId: Guid.Parse(match.Groups["documentId"].Value),
+                    ChunkId: Guid.Parse(match.Groups["chunkId"].Value),
+                    FileName: match.Groups["filename"].Value,
+                    Quote: match.Groups["quote"].Value,
+                    PageNumber: int.TryParse(match.Groups["pageNumber"].Value, out var pageNumber) && pageNumber > 0 ? pageNumber : null,
+                    IndexOnPage: int.TryParse(match.Groups["indexOnPage"].Value, out var indexOnPage) ? indexOnPage : 0
+                ));
+            }
+        }
+
+        // Remove all <citation> tags from the text
+        var cleanText = Regex.Replace(text, pattern, string.Empty, RegexOptions.Singleline).TrimEnd();
+        return (cleanText, citations);
     }
 
     private static TokenUsage? GetTokenUsage(Microsoft.SemanticKernel.ChatMessageContent message)

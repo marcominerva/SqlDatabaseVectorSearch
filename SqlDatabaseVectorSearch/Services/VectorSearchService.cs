@@ -74,9 +74,16 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
         var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
 
-        var (answer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
-
-        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage));
+        var chatResponse = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
+        
+        return new(
+            question.Text, 
+            reformulatedQuestion.Text!, 
+            chatResponse.Text, 
+            null, 
+            new(reformulatedQuestion.TokenUsage, embeddingTokenCount, chatResponse.TokenUsage),
+            chatResponse.Citations
+        );
     }
 
     public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -87,22 +94,44 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken: cancellationToken);
 
         // The first message contains the question and the corresponding token usage (if reformulated).
-        yield return new(question.Text, reformulatedQuestion.Text!, null, StreamState.Start, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null));
+        yield return new(
+            question.Text, 
+            reformulatedQuestion.Text!, 
+            null, 
+            StreamState.Start, 
+            new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null),
+            null
+        );
 
         TokenUsageResponse? tokenUsageResponse = null;
+        IEnumerable<Citation>? citations = null;
 
         // Return each token as a partial response.
-        await foreach (var (token, tokenUsage) in answerStream)
+        await foreach (var chatResponse in answerStream)
         {
+            // Keep track of citations if they're present
+            if (chatResponse.Citations != null)
+            {
+                citations = chatResponse.Citations;
+            }
+            
             // Token usage is expected in the last message.
-            tokenUsageResponse = tokenUsage is not null ? new(tokenUsage) : null;
-            yield return new(token, tokenUsageResponse is null ? StreamState.Append : StreamState.End, tokenUsageResponse);
+            tokenUsageResponse = chatResponse.TokenUsage is not null ? new(chatResponse.TokenUsage) : null;
+            
+            StreamState streamState = tokenUsageResponse is null ? StreamState.Append : StreamState.End;
+            
+            yield return new(
+                chatResponse.Text, 
+                streamState, 
+                tokenUsageResponse,
+                citations
+            );
         }
 
         // If the token usage has not been returned in the last message, we must explicitly tells that the stream is ended.
         if (tokenUsageResponse is null)
         {
-            yield return new(null, StreamState.End);
+            yield return new(null, StreamState.End, null, citations);
         }
     }
 
