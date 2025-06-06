@@ -132,7 +132,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             First provide your complete answer, then list all citations.
             
             Use this XML format for citations:
-            <citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='1'>exact quote here</citation>
+            <citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='page_number' index-on-page='index_on_page'>exact quote here</citation>
             """);
 
         var prompt = new StringBuilder($"""
@@ -151,7 +151,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
         foreach (var chunk in chunks)
         {
-            var text = $"--- {chunk.Document.Name} (Document ID: {chunk.Document.Id} | Chunk ID: {chunk.Id} | Page Number: 1) {Environment.NewLine}{chunk.Content}{Environment.NewLine}";
+            var text = $"--- {chunk.Document.Name} (Document ID: {chunk.Document.Id} | Chunk ID: {chunk.Id} | Page Number: {chunk.PageNumber} | Index on Page: {chunk.IndexOnPage}) {Environment.NewLine}{chunk.Content}{Environment.NewLine}";
 
             var tokenCount = tokenizerService.CountChatCompletionTokens(text);
             if (tokenCount > availableTokens)

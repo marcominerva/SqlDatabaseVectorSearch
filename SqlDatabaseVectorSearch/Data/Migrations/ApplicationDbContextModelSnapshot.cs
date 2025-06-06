@@ -8,7 +8,7 @@ using SqlDatabaseVectorSearch.Data;
 
 #nullable disable
 
-namespace SqlDatabaseVectorSearch.Data.Migrations
+namespace SqlDatabaseVectorSearch.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -17,12 +17,12 @@ namespace SqlDatabaseVectorSearch.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("SqlDatabaseVectorSearch.DataAccessLayer.Entities.Document", b =>
+            modelBuilder.Entity("SqlDatabaseVectorSearch.Data.Entities.Document", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -41,7 +41,7 @@ namespace SqlDatabaseVectorSearch.Data.Migrations
                     b.ToTable("Documents", (string)null);
                 });
 
-            modelBuilder.Entity("SqlDatabaseVectorSearch.DataAccessLayer.Entities.DocumentChunk", b =>
+            modelBuilder.Entity("SqlDatabaseVectorSearch.Data.Entities.DocumentChunk", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -61,6 +61,12 @@ namespace SqlDatabaseVectorSearch.Data.Migrations
                     b.Property<int>("Index")
                         .HasColumnType("int");
 
+                    b.Property<int>("IndexOnPage")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PageNumber")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentId");
@@ -68,9 +74,9 @@ namespace SqlDatabaseVectorSearch.Data.Migrations
                     b.ToTable("DocumentChunks", (string)null);
                 });
 
-            modelBuilder.Entity("SqlDatabaseVectorSearch.DataAccessLayer.Entities.DocumentChunk", b =>
+            modelBuilder.Entity("SqlDatabaseVectorSearch.Data.Entities.DocumentChunk", b =>
                 {
-                    b.HasOne("SqlDatabaseVectorSearch.DataAccessLayer.Entities.Document", "Document")
+                    b.HasOne("SqlDatabaseVectorSearch.Data.Entities.Document", "Document")
                         .WithMany("Chunks")
                         .HasForeignKey("DocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -80,7 +86,7 @@ namespace SqlDatabaseVectorSearch.Data.Migrations
                     b.Navigation("Document");
                 });
 
-            modelBuilder.Entity("SqlDatabaseVectorSearch.DataAccessLayer.Entities.Document", b =>
+            modelBuilder.Entity("SqlDatabaseVectorSearch.Data.Entities.Document", b =>
                 {
                     b.Navigation("Chunks");
                 });

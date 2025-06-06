@@ -39,14 +39,24 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
             dbContext.Documents.Add(document);
 
-            var embeddings = await embeddingGenerator.GenerateAndZipAsync(paragraphs.Select(p => p.Content), cancellationToken: cancellationToken);
+            var embeddings = await embeddingGenerator.GenerateAsync(paragraphs.Select(p => p.Content), cancellationToken: cancellationToken);
 
             // Save the document chunks and the corresponding embedding in the database.
             foreach (var (index, embedding) in embeddings.Index())
             {
-                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(embedding.Value));
+                var paragraph = paragraphs.ElementAt(index);
+                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph.Content));
 
-                var documentChunk = new Entities.DocumentChunk { Document = document, Index = index, Content = embedding.Value, Embedding = embedding.Embedding.Vector.ToArray() };
+                var documentChunk = new Entities.DocumentChunk
+                {
+                    Document = document,
+                    Index = index,
+                    PageNumber = paragraph.PageNumber,
+                    IndexOnPage = paragraph.IndexOnPage,
+                    Content = paragraph.Content,
+                    Embedding = embedding.Vector.ToArray()
+                };
+
                 dbContext.DocumentChunks.Add(documentChunk);
             }
 

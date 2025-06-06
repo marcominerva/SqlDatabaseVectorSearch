@@ -8,6 +8,10 @@ public class DocumentChunk
 
     public int Index { get; set; }
 
+    public int? PageNumber { get; set; }
+
+    public int IndexOnPage { get; set; }
+
     public required string Content { get; set; }
 
     public required float[] Embedding { get; set; }

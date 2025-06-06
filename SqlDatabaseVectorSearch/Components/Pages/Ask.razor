@@ -80,7 +80,7 @@
                                                 {
                                                     <div class="border rounded p-2 me-2 mb-2 citation-box small">
                                                         <div>
-                                                            <strong>@citation.FileName</strong> @if (!string.IsNullOrEmpty(citation.PageNumber))
+                                                            <strong>@citation.FileName</strong> @if (citation.PageNumber.GetValueOrDefault() > 0)
                                                             {
                                                                 <span class="ms-2">pag. @citation.PageNumber</span>
                                                             }
@@ -314,7 +314,7 @@
             return (text ?? string.Empty, citations);
         }
 
-        var pattern = @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'>\s*(?<quote>.*?)\s*</citation>";
+        var pattern = @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'\s+index-on-page='(?<indexOnPage>[^']*)'>\s*(?<quote>.*?)\s*</citation>";
 
         var matches = Regex.Matches(text, pattern, RegexOptions.Singleline);
         foreach (Match match in matches)
@@ -326,7 +326,8 @@
                     DocumentId = Guid.Parse(match.Groups["documentId"].Value),
                     ChunkId = Guid.Parse(match.Groups["chunkId"].Value),
                     FileName = match.Groups["filename"].Value,
-                    PageNumber = match.Groups["pageNumber"].Value,
+                    PageNumber = int.TryParse(match.Groups["pageNumber"].Value, out var pageNumber) && pageNumber > 0 ? pageNumber : null,
+                    IndexOnPage = int.TryParse(match.Groups["indexOnPage"].Value, out var indexOnPage) ? indexOnPage : 0,
                     Quote = match.Groups["quote"].Value
                 });
             }
@@ -368,6 +369,8 @@
 
         public string Quote { get; set; } = null!;
 
-        public string? PageNumber { get; set; }
+        public int? PageNumber { get; set; }
+
+        public int IndexOnPage { get; set; }
     }
 }
