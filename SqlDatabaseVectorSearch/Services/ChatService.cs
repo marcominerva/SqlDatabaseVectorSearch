@@ -116,7 +116,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
 
-            For example, if the user asks "What is the capital of France?" and in this chat there isn't information about France, you should reply something like:
+            For example, if the user asks "What is the capital of Italy?" and in this chat there isn't information about Italy, you should reply something like:
             - This information isn't available in the given context
             - I'm sorry, I don't know the answer to that question
             - I don't have that information
@@ -127,7 +127,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             Never answer questions that are not related to this chat.
             You must answer in the same language as the user's question. For example, if the user asks a question in English, the answer must be in English, no matter the language of the documents.
 
-            After the answer, you need to include citations following the XML format below:
+            After the answer, you need to include citations following the XML format below ONLY IF you know the answer and are providing information from the context. If you do NOT know the answer, DO NOT include the citations section at all.
             【<citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>
             <citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>】
 
@@ -142,23 +142,28 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             5. NEVER reference citations by number or mention them in your answer text.
             6. The citations MUST ALWAYS follow the XML format exactly as shown below. Any other format is NOT ACCEPTED.
             7. If you add anything after the citations block, your answer will be considered invalid.
+            8. If you do NOT know the answer, DO NOT include the citations block at all.
 
             ---
             Example of a correct answer:
-            The capital of France is Paris.
-            【<citation document-id='123' chunk-id='456' filename='france.pdf' page-number='1' index-on-page='1'>capital of France is Paris</citation>】
+            The capital of Italy is Rome.
+            【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
+
+            Example of a correct answer when you do NOT know the answer:
+            I'm sorry, I don't know the answer to that question
 
             Example of an incorrect answer (NOT ACCEPTED):
-            The capital of France is Paris.
-            【<citation document-id='123' chunk-id='456' filename='france.pdf' page-number='1' index-on-page='1'>capital of France is Paris</citation>】
+            The capital of Italy is Rome.
+            【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
             Thank you for your question.
 
             Another incorrect example (NOT ACCEPTED):
-            The capital of France is Paris.
-            【<citation document-id='123' chunk-id='456' filename='france.pdf' page-number='1' index-on-page='1'>capital of France is Paris</citation>】
-            [1] france.pdf, page 1
+            The capital of Italy is Rome.
+            【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
+            [1] italy.pdf, page 1
             ---
             Only the correct format is accepted. If you do not follow the XML format exactly, or if you add anything after the citations block, your answer will be considered invalid.
+            If you do NOT know the answer, DO NOT include the citations block at all.
             """);
 
         var prompt = new StringBuilder($"""
