@@ -197,16 +197,20 @@
                 else if (delta.StreamState == StreamState.Append)
                 {
                     // Adds tokens to the assistant message as they are received.
-                    assistantMessage.RawText += delta.Answer;
-
-                    // Updates the Text property to remove citations, if any.
-                    assistantMessage.Text = RemoveCitations(assistantMessage.RawText);
+                    assistantMessage.Text += delta.Answer;
                 }
                 else if (delta.StreamState == StreamState.End)
                 {
-                    // Extracts citations, if any.
-                    var (_, citations) = ExtractCitations(assistantMessage.RawText);
-                    assistantMessage.Citations = citations;
+                    // Get citations from the response.
+                    assistantMessage.Citations = delta.Citations?.Select(c => new Citation
+                    {
+                        DocumentId = c.DocumentId,
+                        ChunkId = c.ChunkId,
+                        FileName = c.FileName,
+                        Quote = c.Quote,
+                        PageNumber = c.PageNumber,
+                        IndexOnPage = c.IndexOnPage
+                    });
 
                     assistantMessage.IsCompleted = true;
                     assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
@@ -295,58 +299,8 @@
         await JSRuntime.InvokeVoidAsync("scrollTo", chat);
     }
 
-    private static string RemoveCitations(string? text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return string.Empty;
-        }
-
-        return (text.AsSpan().IndexOf("<cit", StringComparison.OrdinalIgnoreCase) is var index and >= 0 ? text[..index] : text).TrimEnd();
-    }
-
-    private static (string, IEnumerable<Citation>) ExtractCitations(string? text)
-    {
-        var citations = new List<Citation>();
-
-        if (string.IsNullOrEmpty(text))
-        {
-            return (text ?? string.Empty, citations);
-        }
-
-        var pattern = @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'\s+index-on-page='(?<indexOnPage>[^']*)'>\s*(?<quote>.*?)\s*</citation>";
-
-        var matches = Regex.Matches(text, pattern, RegexOptions.Singleline);
-        foreach (Match match in matches)
-        {
-            if (match.Success)
-            {
-                citations.Add(new Citation
-                {
-                    DocumentId = Guid.Parse(match.Groups["documentId"].Value),
-                    ChunkId = Guid.Parse(match.Groups["chunkId"].Value),
-                    FileName = match.Groups["filename"].Value,
-                    PageNumber = int.TryParse(match.Groups["pageNumber"].Value, out var pageNumber) && pageNumber > 0 ? pageNumber : null,
-                    IndexOnPage = int.TryParse(match.Groups["indexOnPage"].Value, out var indexOnPage) ? indexOnPage : 0,
-                    Quote = match.Groups["quote"].Value
-                });
-            }
-        }
-
-        // Remove all <citation> tags from the text
-        var cleanText = Regex.Replace(text, pattern, string.Empty, RegexOptions.Singleline).TrimEnd();
-        return (cleanText, citations);
-    }
-
     public class Message
     {
-        private string? rawText;
-        public string? RawText
-        {
-            get => rawText ?? Text;
-            set => rawText = value;
-        }
-
         public string? Text { get; set; }
 
         public required string Role { get; set; }

@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -74,9 +76,12 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         // It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
         var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
 
-        var (answer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
+        var (fullAnswer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
 
-        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage));
+        // Extract citations from the answer
+        var (answer, citations) = ExtractCitations(fullAnswer);
+
+        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage), citations);
     }
 
     public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -90,19 +95,42 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
         yield return new(question.Text, reformulatedQuestion.Text!, null, StreamState.Start, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null));
 
         TokenUsageResponse? tokenUsageResponse = null;
+        var fullAnswer = new StringBuilder();
+        var areCitationsStarted = false;
 
         // Return each token as a partial response.
         await foreach (var (token, tokenUsage) in answerStream)
         {
+            fullAnswer.Append(token);
+
+            if (token?.Contains('【') == true)
+            {
+                // Citations are started when the first token contains a 【 character.
+                // We need to track it because we don't want to return the citations in the actual response.
+                areCitationsStarted = true;
+            }
+
+            if (!areCitationsStarted)
+            {
+                yield return new(token, StreamState.Append);
+            }
+
             // Token usage is expected in the last message.
             tokenUsageResponse = tokenUsage is not null ? new(tokenUsage) : null;
-            yield return new(token, tokenUsageResponse is null ? StreamState.Append : StreamState.End, tokenUsageResponse);
+            if (tokenUsageResponse is not null)
+            {
+                // Response is complete, we can return the citations.
+                var (_, citations) = ExtractCitations(fullAnswer.ToString());
+                yield return new(null, StreamState.End, tokenUsageResponse, citations);
+            }
         }
 
-        // If the token usage has not been returned in the last message, we must explicitly tells that the stream is ended.
+        // If the token usage has not been returned in the last message, we must explicitly tell that the stream is ended.
         if (tokenUsageResponse is null)
         {
-            yield return new(null, StreamState.End);
+            // Extract citations at the end of streaming.
+            var (_, citations) = ExtractCitations(fullAnswer.ToString());
+            yield return new(null, StreamState.End, null, citations);
         }
     }
 
@@ -123,5 +151,36 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
                     .ToListAsync(cancellationToken);
 
         return (reformulatedQuestion, embeddingTokenCount, chunks);
+    }
+
+    private static (string, IEnumerable<Citation>) ExtractCitations(string? text)
+    {
+        var citations = new List<Citation>();
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return (text ?? string.Empty, citations);
+        }
+
+        var matches = Regex.Matches(text, @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'\s+index-on-page='(?<indexOnPage>[^']*)'>\s*(?<quote>.*?)\s*</citation>", RegexOptions.Singleline);
+        foreach (Match match in matches)
+        {
+            if (match.Success)
+            {
+                citations.Add(new Citation
+                {
+                    DocumentId = Guid.Parse(match.Groups["documentId"].Value),
+                    ChunkId = Guid.Parse(match.Groups["chunkId"].Value),
+                    FileName = match.Groups["filename"].Value,
+                    PageNumber = int.TryParse(match.Groups["pageNumber"].Value, out var pageNumber) && pageNumber > 0 ? pageNumber : null,
+                    IndexOnPage = int.TryParse(match.Groups["indexOnPage"].Value, out var indexOnPage) ? indexOnPage : 0,
+                    Quote = match.Groups["quote"].Value
+                });
+            }
+        }
+
+        // Remove all content between 【 and 】
+        var cleanText = Regex.Replace(text, @"【.*?】", string.Empty, RegexOptions.Singleline).TrimEnd();
+        return (cleanText, citations);
     }
 }

@@ -125,14 +125,33 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             - I'm sorry, I don't have enough information to answer that question
 
             Never answer questions that are not related to this chat.
-            You must answer in the same language as the user's question.
+            You must answer in the same language as the user's question. For example, if the user asks a question in English, the answer must be in English, no matter the language of the documents.
 
-            The quote in each <citation> MUST be MAXIMUM 5 words, taken word-for-word from the search result. If the quote is longer than 5 words, your answer is INVALID.
-            When you find an answer, you MUST place ALL citations ONLY at the very end of your response, never inside or between sentences.
-            First provide your complete answer, then list all citations.
-            
-            Use this XML format for citations:
-            <citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='page_number' index-on-page='index_on_page'>exact quote here</citation>
+            After the answer, you need to include citations following the XML format below:
+            【<citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='page_number' index-on-page='index_on-page'>exact quote here</citation>
+            <citation document-id='document_id' chunk-id='chunk_id' filename='string' page-number='page_number' index-on-page='index_on-page'>exact quote here</citation>】
+
+            The entire list of XML citations MUST be enclosed between 【 and 】 (U+3010 and U+3011) and must exactly match the above format.
+            The quote in each <citation> MUST be MAXIMUM 5 words, taken word-for-word from the search result.
+
+            IMPORTANT CITATION RULES:
+            1. NEVER put citations inside your answer text. 
+            2. ALWAYS provide your complete answer FIRST.
+            3. ONLY AFTER completing your answer, add ALL citations in a block at the very end.
+            4. The citations block MUST be the last thing in your response.
+            5. NEVER reference citations by number or mention them in your answer text.
+            6. The citations MUST ALWAYS follow the XML format exactly as shown below. Any other format is NOT ACCEPTED.
+
+            ---
+            Example of a correct answer:
+            The capital of France is Paris.
+            【<citation document-id='123' chunk-id='456' filename='france.pdf' page-number='1' index-on-page='1'>capital of France is Paris</citation>】
+
+            Example of an incorrect answer (NOT ACCEPTED):
+            The capital of France is Paris [1].
+            [1] france.pdf, page 1
+            ---
+            Only the correct format is accepted. If you do not follow the XML format exactly, your answer will be considered invalid.
             """);
 
         var prompt = new StringBuilder($"""
