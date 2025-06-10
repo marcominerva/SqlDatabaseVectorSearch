@@ -14,7 +14,7 @@ using Entities = SqlDatabaseVectorSearch.Data.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public partial class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
@@ -162,7 +162,8 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             return (text ?? string.Empty, citations);
         }
 
-        var matches = Regex.Matches(text, @"<citation\s+document-id='(?<documentId>[^']*)'\s+chunk-id='(?<chunkId>[^']*)'\s+filename='(?<filename>[^']*)'\s+page-number='(?<pageNumber>[^']*)'\s+index-on-page='(?<indexOnPage>[^']*)'>\s*(?<quote>.*?)\s*</citation>", RegexOptions.Singleline);
+        var matches = CitationRegEx.Matches(text);
+
         foreach (Match match in matches)
         {
             if (match.Success)
@@ -179,8 +180,14 @@ public class VectorSearchService(IServiceProvider serviceProvider, ApplicationDb
             }
         }
 
-        // Remove all content between 【 and 】
-        var cleanText = Regex.Replace(text, @"【.*?】", string.Empty, RegexOptions.Singleline).TrimEnd();
+        // Remove all content between 【 and 】.
+        var cleanText = RemoveCitationsRegEx.Replace(text, string.Empty).TrimEnd();
         return (cleanText, citations);
     }
+
+    [GeneratedRegex(@"<citation\s+document-id=(?:""|'|)(?<documentId>[^""']*)(?:""|'|)\s+chunk-id=(?:""|'|)(?<chunkId>[^""']*)(?:""|'|)\s+filename=(?:""|'|)(?<filename>[^""']*)(?:""|'|)\s+page-number=(?:""|'|)(?<pageNumber>[^""']*)(?:""|'|)\s+index-on-page=(?:""|'|)(?<indexOnPage>[^""']*)(?:""|'|)>\s*(?<quote>.*?)\s*</citation>", RegexOptions.Singleline)]
+    private static partial Regex CitationRegEx { get; }
+
+    [GeneratedRegex(@"【.*?】", RegexOptions.Singleline)]
+    private static partial Regex RemoveCitationsRegEx { get; }
 }
