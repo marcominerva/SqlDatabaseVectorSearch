@@ -26,7 +26,7 @@ public class PdfContentDecoder(IServiceProvider serviceProvider) : IContentDecod
         var textBlocks = DocstrumBoundingBoxes.Instance.GetBlocks(words);
         var pageText = string.Join($"{Environment.NewLine}{Environment.NewLine}", textBlocks.Select(t => t.Text.ReplaceLineEndings(" ")));
 
-        var paragraphs = textChunker.Split(pageText);
+        var paragraphs = textChunker.Split(pageText.Trim());
 
         return paragraphs.Where(p => !string.IsNullOrWhiteSpace(p)).Select((text, index) => new Chunk(pdfPage.Number, index, text));
     }

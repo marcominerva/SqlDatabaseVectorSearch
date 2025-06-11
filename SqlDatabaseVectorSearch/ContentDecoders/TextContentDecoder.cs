@@ -11,7 +11,7 @@ public class TextContentDecoder(IServiceProvider serviceProvider) : IContentDeco
         using var readStream = new StreamReader(stream);
         var content = await readStream.ReadToEndAsync(cancellationToken);
 
-        var paragraphs = textChunker.Split(content);
+        var paragraphs = textChunker.Split(content.Trim());
         return paragraphs.Select((text, index) => new Chunk(null, index, text)).ToList();
     }
 }
