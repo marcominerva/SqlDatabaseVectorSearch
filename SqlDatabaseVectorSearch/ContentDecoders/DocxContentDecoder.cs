@@ -36,7 +36,7 @@ public class DocxContentDecoder(IServiceProvider serviceProvider) : IContentDeco
             pageBuilder.AppendLine(paragraph.InnerText);
         }
 
-        // Dopo aver processato tutti i paragrafi, aggiungi l'ultima pagina (anche se vuota)
+        // After processing all paragraphs, add the last page (even if empty).
         pages.Add(pageBuilder.ToString());
 
         var chunks = new List<Chunk>();

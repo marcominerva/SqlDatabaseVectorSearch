@@ -76,7 +76,9 @@ else
             {
                 <tr>
                     <td>
-                        <CheckboxInput @bind-Value="document.IsSelected" />
+                        <div class="d-flex justify-content-center align-items-center">
+                            <CheckboxInput @bind-Value="document.IsSelected" />
+                        </div>
                     </td>
                     <td>@document.Id</td>
                     <td>@document.Name</td>
@@ -107,7 +109,7 @@ else
     private bool isLoading = true;
     private IList<SelectableDocument> documents = [];
 
-    private UploadDocument Model { get; set; } = new();    
+    private UploadDocument Model { get; set; } = new();
 
     [Inject]
     protected ToastService ToastService { get; set; } = default!;
@@ -138,9 +140,9 @@ else
             foreach (var dbDocument in dbDocuments)
             {
                 documents.Add(new SelectableDocument(dbDocument.Id, dbDocument.Name, dbDocument.CreationDate, dbDocument.ChunkCount)
-                    {
-                        LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
-                    });
+                {
+                    LocalCreationDateString = await GetLocalDateTimeStringAsync(dbDocument.CreationDate)
+                });
             }
         }
         finally
@@ -193,12 +195,12 @@ else
         var selectedDocumentIds = documents?.Where(d => d.IsSelected).Select(d => d.Id) ?? [];
 
         var options = new ConfirmDialogOptions
-            {
-                YesButtonText = "Yes",
-                YesButtonColor = ButtonColor.Danger,
-                NoButtonText = "No",
-                NoButtonColor = ButtonColor.Secondary
-            };
+        {
+            YesButtonText = "Yes",
+            YesButtonColor = ButtonColor.Danger,
+            NoButtonText = "No",
+            NoButtonColor = ButtonColor.Secondary
+        };
 
         var confirmation = await dialog.ShowAsync(
             title: "Delete the selected documents?",
@@ -236,12 +238,12 @@ else
     private async Task<ToastMessage> CreateToastMessageAsync(ToastType toastType, string title, string message)
     {
         var toastMessage = new ToastMessage
-            {
-                Type = toastType,
-                Title = title,
-                HelpText = await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow),
-                Message = message
-            };
+        {
+            Type = toastType,
+            Title = title,
+            HelpText = await GetLocalDateTimeStringAsync(DateTimeOffset.UtcNow),
+            Message = message
+        };
 
         return toastMessage;
     }
