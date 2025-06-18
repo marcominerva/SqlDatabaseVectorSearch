@@ -115,7 +115,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
 
             if (token?.Contains('【') == true)
             {
-                // Citations are started when the first token contains a 【 character.
+                // Citations are started when we encounter a token containing a 【 character.
                 // We need to track it because we don't want to return the citations in the actual response.
                 areCitationsStarted = true;
             }
@@ -126,22 +126,12 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
             }
 
             // Token usage is expected in the last message.
-            tokenUsageResponse = tokenUsage is not null ? new(tokenUsage) : null;
-            if (tokenUsageResponse is not null)
-            {
-                // Response is complete, we can return the citations.
-                var (_, citations) = ExtractCitations(fullAnswer.ToString());
-                yield return new(null, StreamState.End, tokenUsageResponse, citations);
-            }
+            tokenUsageResponse ??= tokenUsage is not null ? new(tokenUsage) : null;
         }
 
-        // If the token usage has not been returned in the last message, we must explicitly tell that the stream is ended.
-        if (tokenUsageResponse is null)
-        {
-            // Extract citations at the end of streaming.
-            var (_, citations) = ExtractCitations(fullAnswer.ToString());
-            yield return new(null, StreamState.End, null, citations);
-        }
+        // Extract citations at the end of streaming.
+        var (_, citations) = ExtractCitations(fullAnswer.ToString());
+        yield return new(null, StreamState.End, tokenUsageResponse, citations);
     }
 
     private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<Entities.DocumentChunk> Chunks)> CreateContextAsync(Question question, bool reformulate, CancellationToken cancellationToken)
