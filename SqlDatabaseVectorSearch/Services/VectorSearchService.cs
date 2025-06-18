@@ -22,10 +22,11 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
     {
         // Extract the contents of the file.
         var decoder = serviceProvider.GetKeyedService<IContentDecoder>(contentType) ?? throw new NotSupportedException($"Content type '{contentType}' is not supported.");
-        var paragraphs = await decoder.DecodeAsync(stream, contentType, cancellationToken);
+        var chunks = await decoder.DecodeAsync(stream, contentType, cancellationToken);
+        var chunkContents = chunks.Select(p => p.Content).ToList();
 
         // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
-        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", paragraphs.Select(p => p.Content)));
+        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", chunkContents));
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
         var document = await strategy.ExecuteAsync(async (cancellationToken) =>
@@ -41,21 +42,30 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
             var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
             dbContext.Documents.Add(document);
 
-            var embeddings = await embeddingGenerator.GenerateAsync(paragraphs.Select(p => p.Content), cancellationToken: cancellationToken);
+            // Process paragraphs in batches.
+            var embeddings = new List<Embedding<float>>();
+            foreach (var batch in chunkContents.Chunk(appSettings.EmbeddingBatchSize))
+            {
+                logger.LogDebug("Processing batch of {Count} chunks for embedding generation...", batch.Length);
+
+                // Generate embeddings for this batch.
+                var batchEmbeddings = await embeddingGenerator.GenerateAsync(batch, cancellationToken: cancellationToken);
+                embeddings.AddRange(batchEmbeddings);
+            }
 
             // Save the document chunks and the corresponding embedding in the database.
             foreach (var (index, embedding) in embeddings.Index())
             {
-                var paragraph = paragraphs.ElementAt(index);
-                logger.LogDebug("Storing a paragraph of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(paragraph.Content));
+                var chunk = chunks.ElementAt(index);
+                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(chunk.Content));
 
                 var documentChunk = new Entities.DocumentChunk
                 {
                     Document = document,
                     Index = index,
-                    PageNumber = paragraph.PageNumber,
-                    IndexOnPage = paragraph.IndexOnPage,
-                    Content = paragraph.Content,
+                    PageNumber = chunk.PageNumber,
+                    IndexOnPage = chunk.IndexOnPage,
+                    Content = chunk.Content,
                     Embedding = embedding.Vector.ToArray()
                 };
 

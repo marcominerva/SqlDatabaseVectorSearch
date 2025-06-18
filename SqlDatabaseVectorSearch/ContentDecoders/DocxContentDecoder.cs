@@ -11,41 +11,22 @@ public class DocxContentDecoder(IServiceProvider serviceProvider) : IContentDeco
     {
         var textChunker = serviceProvider.GetRequiredKeyedService<ITextChunker>(contentType);
 
+        // Open a Word document for read-only access.
         using var document = WordprocessingDocument.Open(stream, false);
+
         var body = document.MainDocumentPart?.Document.Body;
-        if (body is null)
+        var content = new StringBuilder();
+
+        foreach (var p in body?.Descendants<Paragraph>() ?? [])
         {
-            return Task.FromResult(Enumerable.Empty<Chunk>());
+            content.AppendLine(p.InnerText);
         }
 
-        var pages = new List<string>();
-        var pageBuilder = new StringBuilder();
+        var paragraphs = textChunker.Split(content.ToString().Trim());
 
-        foreach (var paragraph in body.Descendants<Paragraph>())
-        {
-            // Note: this is just an attempt at counting pages, not 100% reliable
-            // see https://stackoverflow.com/questions/39992870/how-to-access-openxml-content-by-page-number
-            var lastRenderedPageBreak = paragraph.GetFirstChild<Run>()?.GetFirstChild<LastRenderedPageBreak>();
-            if (lastRenderedPageBreak is not null)
-            {
-                // Note: no trimming, use original spacing when working with pages
-                pages.Add(pageBuilder.ToString());
-                pageBuilder.Clear();
-            }
-
-            pageBuilder.AppendLine(paragraph.InnerText);
-        }
-
-        // After processing all paragraphs, add the last page (even if empty).
-        pages.Add(pageBuilder.ToString());
-
-        var chunks = new List<Chunk>();
-        foreach (var (pageIndex, pageText) in pages.Index())
-        {
-            var paragraphs = textChunker.Split(pageText.Trim());
-            chunks.AddRange(paragraphs.Where(p => !string.IsNullOrWhiteSpace(p)).Select((text, index) => new Chunk(pageIndex + 1, index, text)));
-        }
-
-        return Task.FromResult(chunks.AsEnumerable());
+        // Pages do not exist in the OpenXML format until they are rendered by a word processor.
+        // See https://stackoverflow.com/questions/43700252/how-to-get-page-numbers-based-on-openxmlelement for more details.
+        // Therefore, we will not assign a page number.
+        return Task.FromResult(paragraphs.Select((text, index) => new Chunk(null, index, text)).ToList().AsEnumerable());
     }
 }

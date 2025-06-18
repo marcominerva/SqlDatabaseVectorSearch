@@ -2,6 +2,8 @@
 
 public class AppSettings
 {
+    public int EmbeddingBatchSize { get; init; } = 32;
+
     public int MaxTokensPerLine { get; init; } = 300;
 
     public int MaxTokensPerParagraph { get; init; } = 1000;
