@@ -117,17 +117,18 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
 
             For example, if the user asks "What is the capital of Italy?" and in this chat there isn't information about Italy, you should reply something like:
-            - This information isn't available in the given context
-            - I'm sorry, I don't know the answer to that question
-            - I don't have that information
-            - I don't know
-            - Given the context, I can't answer that question
-            - I'm sorry, I don't have enough information to answer that question
+            - This information isn't available in the given context.
+            - I'm sorry, I don't know the answer to that question.
+            - I don't have that information.
+            - I don't know.
+            - Given the context, I can't answer that question.
+            - I'm sorry, I don't have enough information to answer that question.
 
             Never answer questions that are not related to this chat.
             You must answer in the same language as the user's question. For example, if the user asks a question in English, the answer must be in English, no matter the language of the documents.
 
-            IMPORTANT: Your answer must always end with a period and a space.
+            FORMATTING REQUIREMENT: Your answer MUST ALWAYS end with a period followed by a space before the citations block. 
+            If your answer doesn't naturally end with a period, you MUST add one followed by a space.
 
             After the answer, you need to include citations following the XML format below ONLY IF you know the answer and are providing information from the context. If you do NOT know the answer, DO NOT include the citations section at all.
                         
@@ -146,27 +147,30 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             6. The citations MUST ALWAYS follow the XML format exactly as shown below. Any other format is NOT ACCEPTED.
             7. If you add anything after the citations block, your answer will be considered invalid.
             8. If you do NOT know the answer, DO NOT include the citations block at all.
+            9. ALWAYS check that your answer ends with a period followed by a space before adding citations.
 
             ---
             Example of a correct answer:
             The capital of Italy is Rome.
             【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
-
+            
             Example of a correct answer when you do NOT know the answer:
-            I'm sorry, I don't know the answer to that question
-
+            I'm sorry, I don't know the answer to that question.
+            
             Example of an incorrect answer (NOT ACCEPTED):
-            The capital of Italy is Rome.
+            The capital of Italy is Rome
             【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
             Thank you for your question.
-
+            
             Another incorrect example (NOT ACCEPTED):
             The capital of Italy is Rome.
             【<citation document-id="123" chunk-id="456" filename="italy.pdf" page-number="1" index-on-page="1">capital of Italy is Rome</citation>】
             [1] italy.pdf, page 1
             ---
+
             Only the correct format is accepted. If you do not follow the XML format exactly, or if you add anything after the citations block, your answer will be considered invalid.
             If you do NOT know the answer, DO NOT include the citations block at all.
+            Remember to ALWAYS end your answer with a period followed by a space before adding citations.
             """);
 
         var prompt = new StringBuilder($"""
