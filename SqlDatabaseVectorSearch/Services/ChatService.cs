@@ -127,7 +127,10 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             Never answer questions that are not related to this chat.
             You must answer in the same language as the user's question. For example, if the user asks a question in English, the answer must be in English, no matter the language of the documents.
 
+            IMPORTANT: Your answer must always end with a period and a space.
+
             After the answer, you need to include citations following the XML format below ONLY IF you know the answer and are providing information from the context. If you do NOT know the answer, DO NOT include the citations section at all.
+                        
             【<citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>
             <citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>】
 
