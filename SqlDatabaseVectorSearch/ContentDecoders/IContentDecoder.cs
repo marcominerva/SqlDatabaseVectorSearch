@@ -2,5 +2,7 @@
 
 public interface IContentDecoder
 {
-    Task<string> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Chunk>> DecodeAsync(Stream stream, string contentType, CancellationToken cancellationToken = default);
 }
+
+public record class Chunk(int? PageNumber, int IndexOnPage, string Content);

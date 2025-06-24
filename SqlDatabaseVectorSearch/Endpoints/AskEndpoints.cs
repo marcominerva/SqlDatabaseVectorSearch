@@ -23,7 +23,7 @@ public class AskEndpoints : IEndpointRouteHandlerBuilder
         endpoints.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
             [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
         {
-            async IAsyncEnumerable<QuestionResponse> Stream()
+            async IAsyncEnumerable<Response> Stream()
             {
                 // Requests a streaming response.
                 var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate, cancellationToken);

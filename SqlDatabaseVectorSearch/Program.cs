@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.SemanticKernel;
 using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
-using SqlDatabaseVectorSearch.DataAccessLayer;
+using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Extensions;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
@@ -63,12 +63,6 @@ builder.Services.AddKernel()
     .AddAzureOpenAIEmbeddingGenerator(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, modelId: aiSettings.Embedding.ModelId, dimensions: aiSettings.Embedding.Dimensions)
     .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey, modelId: aiSettings.ChatCompletion.ModelId);
 
-builder.Services.AddSingleton<TokenizerService>();
-builder.Services.AddSingleton<ChatService>();
-
-builder.Services.AddScoped<DocumentService>();
-builder.Services.AddScoped<VectorSearchService>();
-
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
@@ -76,6 +70,12 @@ builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTyp
 
 builder.Services.AddKeyedSingleton<ITextChunker, DefaultTextChunker>(KeyedService.AnyKey);
 builder.Services.AddKeyedSingleton<ITextChunker, MarkdownTextChunker>(MediaTypeNames.Text.Markdown);
+
+builder.Services.AddSingleton<TokenizerService>();
+builder.Services.AddSingleton<ChatService>();
+
+builder.Services.AddScoped<DocumentService>();
+builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddOpenApi(options =>
 {

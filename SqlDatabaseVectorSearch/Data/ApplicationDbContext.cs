@@ -1,8 +1,8 @@
 ﻿using EntityFramework.Exceptions.SqlServer;
 using Microsoft.EntityFrameworkCore;
-using SqlDatabaseVectorSearch.DataAccessLayer.Entities;
+using SqlDatabaseVectorSearch.Data.Entities;
 
-namespace SqlDatabaseVectorSearch.DataAccessLayer;
+namespace SqlDatabaseVectorSearch.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {

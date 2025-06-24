@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using SqlDatabaseVectorSearch.Models;
 
-namespace SqlDatabaseVectorSearch.Validators;
+namespace SqlDatabaseVectorSearch.Validations;
 
 public class QuestionValidator : AbstractValidator<Question>
 {

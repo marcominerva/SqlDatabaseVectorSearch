@@ -1,6 +1,6 @@
 ﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
-using SqlDatabaseVectorSearch.DataAccessLayer;
+using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Models;
 
 namespace SqlDatabaseVectorSearch.Services;

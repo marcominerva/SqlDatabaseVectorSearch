@@ -4,16 +4,34 @@
 <PageTitle>SQL Database Vector Search</PageTitle>
 
 <h1>SQL Database Vector Search</h1>
-<p class="mt-3">
-    How to use the native VECTOR type in <img src="/images/sqldatabase.svg" /> Azure SQL Database to perform embeddings and RAG with <img src="/images/openai.svg" /> Azure OpenAI.
-</p>
-<p>
-    This application allows to load documents, generate embeddings and save them into the database as Vectors, and perform searches using Vector Search and RAG. Currently, PDF, DOCX, TXT and MD files are supported. Vectors are saved and retrieved with Entity Framework Core using the <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a> library. Embedding and Chat Completion are integrated with <a href="https://github.com/microsoft/semantic-kernel" target="_blank">Semantic Kernel</a>.
+
+<p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">
+    A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native VECTOR type in <img src="/images/sqldatabase.svg" style="height:1.5em;vertical-align:middle;" /> Azure SQL Database with <img src="/images/openai.svg" style="height:1.5em;vertical-align:middle;" /> Azure OpenAI.
 </p>
 
-<h3>Supported features</h3>
+<p>
+    This application allows you to:
+    <ul>
+        <li>Load documents (PDF, DOCX, TXT, MD)</li>
+        <li>Generate embeddings and save them as vectors in Azure SQL Database</li>
+        <li>Perform semantic search and RAG using Azure OpenAI</li>
+        <li>Interact via a Blazor Web App or programmatically via Minimal API</li>
+    </ul>
+    Embeddings and chat completion are powered by <a href="https://github.com/microsoft/semantic-kernel" target="_blank">Semantic Kernel</a>. Vectors are managed with <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a>.
+</p>
+
+<h3>Supported Features</h3>
 <ul>
-    <li><strong>Conversation History with Question Reformulation</strong>: This feature allows users to view the history of their conversations, including the ability to reformulate questions for better clarity and understanding. This ensures that users can track their interactions and refine their queries as needed.</li>
-    <li><strong>Information about Token Usage</strong>: Users can access detailed information about token usage, which helps in understanding the consumption of tokens during interactions. This feature provides transparency and helps users manage their token usage effectively.</li>
-    <li><strong>Response Streaming</strong>: This feature enables real-time streaming of responses, allowing users to receive information as it is being processed. This ensures a seamless and efficient flow of information, enhancing the overall user experience.</li>
+    <li><strong>Conversation History with Question Reformulation</strong>: View and reformulate your conversation history for better clarity and understanding.</li>
+    <li><strong>Information about Token Usage</strong>: Access detailed information about token usage for transparency and management.</li>
+    <li><strong>Response Streaming</strong>: Receive real-time streaming of responses for a seamless and efficient user experience.</li>
+    <li><strong>Citations</strong>: Get citations for the sources used to justify each answer, allowing you to verify and understand the origin of the content.</li>
 </ul>
+
+<p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">
+    Try <a href="/documents">uploading a document</a> or <a href="/ask">ask a question</a> to get started!
+</p>
+
+<p class="mt-4">
+    <em>For API usage and more details, see the <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch#how-to-use" target="_blank">README</a>.</em>
+</p>

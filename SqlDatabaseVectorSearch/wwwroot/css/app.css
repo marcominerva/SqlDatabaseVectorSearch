@@ -62,3 +62,9 @@ h1:focus {
     .blazor-error-boundary::after {
         content: "An error has occurred."
     }
+
+.citation-box {
+    width: fit-content;
+    max-width: 100%;
+    background-color: #f8f9fa;
+}
