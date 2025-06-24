@@ -91,7 +91,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
         // Extract citations from the answer
         var (answer, citations) = ExtractCitations(fullAnswer);
 
-        return new(question.Text, reformulatedQuestion.Text!, answer, null, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage), citations);
+        return new(question.Text, reformulatedQuestion.Text!, answer, StreamState.End, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage), citations);
     }
 
     public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -106,27 +106,32 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
 
         TokenUsageResponse? tokenUsageResponse = null;
         var fullAnswer = new StringBuilder();
-        var areCitationsStarted = false;
+        var citationsStarted = false;
 
-        // Return each token as a partial response.
+        // Returns each token as a partial response.
         await foreach (var (token, tokenUsage) in answerStream)
         {
-            fullAnswer.Append(token);
-
-            if (token?.Contains('【') == true)
+            if (token is not null) // token can be null when the stream ends. 
             {
-                // Citations are started when we encounter a token containing a 【 character.
-                // We need to track it because we don't want to return the citations in the actual response.
-                areCitationsStarted = true;
-            }
+                fullAnswer.Append(token);
 
-            if (!areCitationsStarted)
+                if (token.Contains('【'))
+                {
+                    // Citations start when we encounter a token containing a 【 character.
+                    // We need to track it because we don't want to return the citations in the actual response.
+                    citationsStarted = true;
+                }
+
+                if (!citationsStarted)
+                {
+                    yield return new(token, StreamState.Append);
+                }
+            }
+            else
             {
-                yield return new(token, StreamState.Append);
+                // Token usage is expected in the last message, when token is null.
+                tokenUsageResponse ??= tokenUsage is not null ? new(tokenUsage) : null;
             }
-
-            // Token usage is expected in the last message.
-            tokenUsageResponse ??= tokenUsage is not null ? new(tokenUsage) : null;
         }
 
         // Extract citations at the end of streaming.

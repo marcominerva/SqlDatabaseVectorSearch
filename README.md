@@ -27,26 +27,47 @@ This repository contains a Blazor Web App as well as a Minimal API that allows t
 - **Conversation History with Question Reformulation**: This feature allows users to view the history of their conversations, including the ability to reformulate questions for better clarity and understanding. This ensures that users can track their interactions and refine their queries as needed.
 - **Information about Token Usage**: Users can access detailed information about token usage, which helps in understanding the consumption of tokens during interactions. This feature provides transparency and helps users manage their token usage effectively.
 - **Response streaming**: This feature enables real-time streaming of responses, allowing users to receive information as it is being processed. This ensures a seamless and efficient flow of information, enhancing the overall user experience.
+- **Citations**: The application provides citations for the sources used to justify each answer. This allows users to verify the information and understand the origin of the content provided by the system.
+
+### Example of JSON response
 
 ```json
 {
   "originalQuestion": "why is mars called the red planet?",
-  "reformulatedQuestion": "Why is Mars referred to as the Red Planet?",
-  "answer": "Mars is referred to as the Red Planet due to its characteristic reddish color, which is caused by the abundance of iron oxide (rust) on its surface. This distinctive coloration has also been a significant factor in the cultural and mythological associations of Mars across different civilizations.",
-  "streamState": null,
+  "reformulatedQuestion": "Why is the planet Mars called the red planet?",
+  "answer": "Mars is called the Red Planet because its surface has an orange-red color due to being covered in iron(III) oxide dust, also known as rust. This iron oxide gives Mars its distinctive reddish appearance when observed from Earth and is the origin of its well-known nickname",
+  "streamState": "End",
   "tokenUsage": {
     "reformulation": {
-      "promptTokens": 107,
-      "completionTokens": 10,
-      "totalTokens": 117
+      "promptTokens": 812,
+      "completionTokens": 11,
+      "totalTokens": 823
     },
     "embeddingTokenCount": 10,
     "question": {
-      "promptTokens": 9142,
-      "completionTokens": 53,
-      "totalTokens": 9195
+      "promptTokens": 31708,
+      "completionTokens": 227,
+      "totalTokens": 31935
     }
-  }
+  },
+  "citations": [
+    {
+      "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
+      "chunkId": "749aba1e-0db5-4033-cfa6-08ddb0115da3",
+      "fileName": "Mars.pdf",
+      "quote": "surface of Mars is orange-red because it is covered in iron(III) oxide",
+      "pageNumber": 1,
+      "indexOnPage": 0
+    },
+    {
+      "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
+      "chunkId": "215e7197-513f-4fbe-cfa8-08ddb0115da3",
+      "fileName": "Mars.pdf",
+      "quote": "Martian surface is caused by ferric oxide, or rust",
+      "pageNumber": 3,
+      "indexOnPage": 0
+    }
+  ]
 }
 ```
 
@@ -58,69 +79,133 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
 [
   {
     "originalQuestion": "why is mars called the red planet?",
-    "reformulatedQuestion": "Why is Mars referred to as the Red Planet?",
+    "reformulatedQuestion": "Why is the planet Mars known as the red planet?",
     "answer": null,
     "streamState": "Start",
     "tokenUsage": {
       "reformulation": {
-        "promptTokens": 107,
-        "completionTokens": 10,
-        "totalTokens": 117
+        "promptTokens": 541,
+        "completionTokens": 12,
+        "totalTokens": 553
       },
-      "embeddingTokenCount": 10,
+      "embeddingTokenCount": 11,
       "question": null
-    }
+    },
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
     "answer": "Mars",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
     "answer": " is",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
-    "answer": " called",
+    "answer": " known",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " as",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
     "answer": " the",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
-    "answer": " Red",
+    "answer": " red",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
-    "answer": " Planet",
+    "answer": " planet",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
-  //...
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
-    "answer": ".",
+    "answer": " because",
     "streamState": "Append",
-    "tokenUsage": null
+    "tokenUsage": null,
+    "citations": null
   },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " its",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " surface",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " is",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " covered",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " in",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  {
+    "originalQuestion": null,
+    "reformulatedQuestion": null,
+    "answer": " iron",
+    "streamState": "Append",
+    "tokenUsage": null,
+    "citations": null
+  },
+  /// ...  
   {
     "originalQuestion": null,
     "reformulatedQuestion": null,
@@ -130,11 +215,29 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
       "reformulation": null,
       "embeddingTokenCount": null,
       "question": {
-        "promptTokens": 8986,
-        "completionTokens": 31,
-        "totalTokens": 9017
+        "promptTokens": 30949,
+        "completionTokens": 221,
+        "totalTokens": 31170
       }
-    }
+    },
+    "citations": [
+      {
+        "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
+        "chunkId": "749aba1e-0db5-4033-cfa6-08ddb0115da3",
+        "fileName": "Mars.pdf",
+        "quote": "surface of Mars is orange-red",
+        "pageNumber": 1,
+        "indexOnPage": 0
+      },
+      {
+        "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
+        "chunkId": "215e7197-513f-4fbe-cfa8-08ddb0115da3",
+        "fileName": "Mars.pdf",
+        "quote": "red-orange appearance of the Martian surface is caused by ferric oxide, or rust",
+        "pageNumber": 3,
+        "indexOnPage": 0
+      }
+    ]
   }
 ]
 ```
@@ -147,7 +250,7 @@ When using the `/api/ask-streaming` endpoint, answers will be streamed as happen
   - each one contains a token
   - The *streamState* property is set to `Append`
   - *origianlQuestion*, *reformulatedQuestion* and *tokenUsage* are always `null`
-- The stream ends when an element with *streamState* equals to `End` is received. This element contains token usage information for the question and the whole answer.
+- The stream ends when an element with *streamState* equals to `End` is received. This element contains token usage information for the question and the whole answer and the list of citations.
 
 > [!NOTE]
 > If you prefer to use straight SQL, check out the [sql branch](https://github.com/marcominerva/SqlDatabaseVectorSearch/tree/sql).
