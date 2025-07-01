@@ -4,7 +4,7 @@
 - Always use the latest version C#, currently C# 13 features.
 - Write code that is clean, maintainable, and easy to understand.
 - Only add comments rarely to explain why a non-intuitive solution was used. The code should be self-explanatory otherwise.
-- Don't add the UTF-8 BOM to files unless they have non-ASCII characters
+- Don't add the UTF-8 BOM to files unless they have non-ASCII characters.
 - Never change global.json unless explicitly asked to.
 - Never change package.json or package-lock.json files unless explicitly asked to.
 - Never change NuGet.config files unless explicitly asked to.
@@ -68,6 +68,10 @@
 - For keywords like `null`, `true` or `false` use `<see langword="*" />` tags.
 - Include code examples in documentation where appropriate.
 - Overriding members should inherit the XML documentation from the base type via `/// <inheritdoc />`.
+
+## Markdown
+- Use Markdown for documentation files (e.g., README.md).
+- Use triple backticks for code blocks, JSON snippets and bash commands, specifying the language (e.g., ```csharp, ```json and ```bash).
 
 ## Testing
 
