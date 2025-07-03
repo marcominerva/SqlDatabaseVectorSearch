@@ -41,7 +41,7 @@
         </div>
         <div class="col-md-2 col-sm-3 col-2">
             <div class="d-grid gap-2">
-                <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
+                <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)" Class="w-100 py-2 fw-semibold shadow-sm"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
             </div>
         </div>
     </div>
@@ -60,40 +60,46 @@ else
         Available documents
     </h4>
 
-    <table class="table table-bordered table-striped table-hover">
-        <thead>
-            <tr>
-                <th></th>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Content type</th>
-                <th>Number of chunks</th>
-                <th>Creation date</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var document in documents)
-            {
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 border rounded overflow-hidden">
+            <thead class="table-light sticky-top">
                 <tr>
-                    <td>
-                        <div class="d-flex justify-content-center align-items-center">
-                            <CheckboxInput @bind-Value="document.IsSelected" />
-                        </div>
-                    </td>
-                    <td>@document.Id</td>
-                    <td>@document.Name</td>
-                    <td>@document.ContentType</td>
-                    <td>@document.ChunkCount</td>
-                    <td>@document.LocalCreationDateString</td>
+                    <th style="width:40px;"></th>
+                    <th class="text-secondary">ID</th>
+                    <th class="text-secondary">Name</th>
+                    <th class="text-secondary">Content type</th>
+                    <th class="text-secondary text-center">Chunks</th>
+                    <th class="text-secondary">Created</th>
                 </tr>
-            }
-        </tbody>
-    </table>
-
+            </thead>
+            <tbody>
+                @foreach (var document in documents)
+                {
+                    <tr class="@((document.IsSelected ? "table-primary" : null))">
+                        <td>
+                            <div class="d-flex justify-content-center align-items-center">
+                                <CheckboxInput @bind-Value="document.IsSelected" />
+                            </div>
+                        </td>
+                        <td class="text-break small">@document.Id</td>
+                        <td class="fw-medium">@document.Name</td>
+                        <td>
+                            <span class="badge content-type-badge px-2 py-1 rounded-pill small">
+                                @document.ContentType
+                            </span>
+                        </td>
+                        <td class="text-center">@document.ChunkCount</td>
+                        <td class="small text-secondary">@document.LocalCreationDateString</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="my-4"></div>
     <div class="row">
         <div class="col-md-2 col-sm-3 col-2">
             <div class="d-grid gap-2">
-                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments">
+                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments" Class="w-100 py-2 fw-semibold shadow-sm">
                     <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
                 </Button>
             </div>

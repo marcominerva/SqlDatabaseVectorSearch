@@ -88,7 +88,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
 
         var (fullAnswer, tokenUsage) = await chatService.AskQuestionAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken);
 
-        // Extract citations from the answer
+        // Extract citations from the answer.
         var (answer, citations) = ExtractCitations(fullAnswer);
 
         return new(question.Text, reformulatedQuestion.Text!, answer, StreamState.End, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, tokenUsage), citations);

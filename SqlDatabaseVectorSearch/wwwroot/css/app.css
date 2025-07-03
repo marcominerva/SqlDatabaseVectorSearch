@@ -63,6 +63,12 @@ h1:focus {
         content: "An error has occurred."
     }
 
+.content-type-badge {
+    background-color: #e5e7eb !important;
+    color: #495057 !important;
+    border: 1px solid #d1d5db !important;
+}
+
 .citation-box {
     width: fit-content;
     max-width: 100%;
