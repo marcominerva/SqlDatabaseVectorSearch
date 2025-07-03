@@ -187,7 +187,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
 
         // Remove all content between 【 and 】.
         var cleanText = RemoveCitationsRegEx.Replace(text, string.Empty).TrimEnd();
-        return (cleanText, citations);
+        return (cleanText, citations.OrderBy(c => c.FileName).ThenBy(c => c.PageNumber));
     }
 
     [GeneratedRegex(@"<citation\s+document-id=(?:""|'|)(?<documentId>[^""']*)(?:""|'|)\s+chunk-id=(?:""|'|)(?<chunkId>[^""']*)(?:""|'|)\s+filename=(?:""|'|)(?<filename>[^""']*)(?:""|'|)\s+page-number=(?:""|'|)(?<pageNumber>[^""']*)(?:""|'|)\s+index-on-page=(?:""|'|)(?<indexOnPage>[^""']*)(?:""|'|)>\s*(?<quote>.*?)\s*</citation>", RegexOptions.Singleline)]
