@@ -19,19 +19,26 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
     {
         var chat = await GetChatHistoryAsync(conversationId, cancellationToken);
 
+        var settings = new AzureOpenAIPromptExecutionSettings
+        {
+            ChatSystemPrompt = """
+                You are a helpful assistant that reformulates questions to perform embeddings search.
+                Your task is to reformulate the question taking into account the context of the chat.
+                The reformulated question must always explicitly contain the subject of the question.
+                You must reformulate the question in the same language of the user's question. For example, if the user asks a question in English, the answer must be in English.
+                Never add "in this chat", "in the context of this chat", "in the context of our conversation", "search for" or something like that in your answer.
+                """
+        };
+
         var embeddingQuestion = $"""
-            Reformulate the following question taking into account the context of the chat to perform embeddings search:
+            Reformulate the following question:
             ---
             {question}
-            ---
-            The reformulation must always explicitly contain the subject of the question.
-            You must reformulate the question in the same language of the user's question. For example, it the user asks a question in English, the answer must be in English.
-            Never add "in this chat", "in the context of this chat", "in the context of our conversation", "search for" or something like that in your answer.
             """;
 
         chat.AddUserMessage(embeddingQuestion);
 
-        var reformulatedQuestion = await chatCompletionService.GetChatMessageContentAsync(chat, cancellationToken: cancellationToken);
+        var reformulatedQuestion = await chatCompletionService.GetChatMessageContentAsync(chat, settings, cancellationToken: cancellationToken);
         chat.AddAssistantMessage(reformulatedQuestion.Content!);
 
         await UpdateCacheAsync(conversationId, chat, cancellationToken);
@@ -44,12 +51,9 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
     public async Task<ChatResponse> AskQuestionAsync(Guid conversationId, IEnumerable<Entities.DocumentChunk> chunks, string question, CancellationToken cancellationToken = default)
     {
-        var chat = CreateChatAsync(chunks, question);
+        var (chat, settings) = CreateChatAsync(chunks, question);
 
-        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = appSettings.MaxOutputTokens
-        }, cancellationToken: cancellationToken);
+        var answer = await chatCompletionService.GetChatMessageContentAsync(chat, settings, cancellationToken: cancellationToken);
 
         // Add question and answer to the chat history.
         await SetChatHistoryAsync(conversationId, question, answer.Content!, cancellationToken);
@@ -62,13 +66,10 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
 
     public async IAsyncEnumerable<ChatResponse> AskStreamingAsync(Guid conversationId, IEnumerable<Entities.DocumentChunk> chunks, string question, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var chat = CreateChatAsync(chunks, question);
+        var (chat, settings) = CreateChatAsync(chunks, question);
 
         var answer = new StringBuilder();
-        await foreach (var token in chatCompletionService.GetStreamingChatMessageContentsAsync(chat, new AzureOpenAIPromptExecutionSettings
-        {
-            MaxTokens = appSettings.MaxOutputTokens
-        }, cancellationToken: cancellationToken))
+        await foreach (var token in chatCompletionService.GetStreamingChatMessageContentsAsync(chat, settings, cancellationToken: cancellationToken))
         {
             if (!string.IsNullOrEmpty(token.Content))
             {
@@ -111,8 +112,13 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         return null;
     }
 
-    private ChatHistory CreateChatAsync(IEnumerable<Entities.DocumentChunk> chunks, string question)
+    private (ChatHistory Chat, AzureOpenAIPromptExecutionSettings Settings) CreateChatAsync(IEnumerable<Entities.DocumentChunk> chunks, string question)
     {
+        var settings = new AzureOpenAIPromptExecutionSettings
+        {
+            MaxTokens = appSettings.MaxOutputTokens
+        };
+
         var chat = new ChatHistory("""
             You can use only the information provided in this chat to answer questions. If you don't know the answer, reply suggesting to refine the question.
 
@@ -209,7 +215,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         }
 
         chat.AddUserMessage(prompt.ToString());
-        return chat;
+        return (chat, settings);
     }
 
     private async Task UpdateCacheAsync(Guid conversationId, ChatHistory chat, CancellationToken cancellationToken)
