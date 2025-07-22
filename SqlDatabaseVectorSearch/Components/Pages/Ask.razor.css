@@ -77,6 +77,27 @@ input[type="checkbox"] + label {
     }
 }
 
+.message-content {
+    position: relative;
+}
+
+.streaming-content {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    min-height: 1.5em;
+}
+
+.streaming-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.streaming-spinner-bottom-right {
+    flex-shrink: 0;
+    align-self: flex-end;
+}
+
 .btn-clipboard {
     line-height: 1;
     color: var(--bs-body-color);

@@ -47,10 +47,20 @@
                             else
                             {
                                 <div class="card card-text d-inline-block p-2 px-3 m-1">
-                                    <div>
-                                        <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                                    <div class="message-content">
+                                        <div class="streaming-content">
+                                            <div class="streaming-text">
+                                                <Markdown style="overflow-y:auto;">@message.Text</Markdown>
+                                            </div>
+                                            @if (message.Status == MessageStatus.Streaming)
+                                            {
+                                                <div class="streaming-spinner-bottom-right">
+                                                    <Spinner Size="SpinnerSize.Small" Color="SpinnerColor.Primary" />
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
-                                    @if (message.IsCompleted)
+                                    @if (message.Status == MessageStatus.Completed)
                                     {
                                         <div class="d-flex justify-content-between">
                                             <div class="text-start bg-transparent mt-3">
@@ -170,10 +180,10 @@
         isAsking = true;
 
         var userQuestion = new Question(conversationId, question!);
-        var userMessage = new Message { Text = userQuestion.Text, Role = "user" };
+        var userMessage = new Message { Text = userQuestion.Text, Role = "user", Status = MessageStatus.Completed };
         messages.Add(userMessage);
 
-        var assistantMessage = new Message { Role = "assistant" };
+        var assistantMessage = new Message { Role = "assistant", Status = MessageStatus.New };
         messages.Add(assistantMessage);
 
         question = null;
@@ -193,6 +203,7 @@
                 {
                     userMessage.Text = delta.ReformulatedQuestion;
                     assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
+                    assistantMessage.Status = MessageStatus.Streaming;
                 }
                 else if (delta.StreamState == StreamState.Append)
                 {
@@ -212,7 +223,7 @@
                         IndexOnPage = c.IndexOnPage
                     });
 
-                    assistantMessage.IsCompleted = true;
+                    assistantMessage.Status = MessageStatus.Completed;
                     assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
                 }
 
@@ -225,7 +236,7 @@
         catch (Exception ex)
         {
             assistantMessage.Text = $"There was an error while processing the question: {ex.Message}";
-            assistantMessage.IsCompleted = true;
+            assistantMessage.Status = MessageStatus.Completed;
         }
         finally
         {
@@ -299,13 +310,20 @@
         await JSRuntime.InvokeVoidAsync("scrollTo", chat);
     }
 
+    public enum MessageStatus
+    {
+        New,
+        Streaming,
+        Completed
+    }
+
     public class Message
     {
         public string? Text { get; set; }
 
         public required string Role { get; set; }
 
-        public bool IsCompleted { get; set; }
+        public MessageStatus Status { get; set; } = MessageStatus.New;
 
         public string? TokenUsage { get; set; }
 
