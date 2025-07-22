@@ -82,20 +82,23 @@ input[type="checkbox"] + label {
 }
 
 .streaming-content {
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
+    position: relative;
     min-height: 1.5em;
 }
 
 .streaming-text {
-    flex: 1;
-    min-width: 0;
+    /* Add padding to make space for the spinner when streaming */
 }
 
-.streaming-spinner-bottom-right {
-    flex-shrink: 0;
-    align-self: flex-end;
+.streaming-text-with-spinner {
+    padding-bottom: 28px; /* Space for spinner (16px height + 8px margin + 4px extra) */
+}
+
+.streaming-spinner-bottom-left {
+    position: absolute;
+    bottom: 2px;
+    left: 0px;
+    z-index: 10;
 }
 
 .btn-clipboard {

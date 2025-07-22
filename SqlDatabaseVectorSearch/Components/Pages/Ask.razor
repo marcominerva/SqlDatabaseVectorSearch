@@ -49,12 +49,12 @@
                                 <div class="card card-text d-inline-block p-2 px-3 m-1">
                                     <div class="message-content">
                                         <div class="streaming-content">
-                                            <div class="streaming-text">
+                                            <div class="streaming-text @(message.Status == MessageStatus.Streaming ? "streaming-text-with-spinner" : "")">
                                                 <Markdown style="overflow-y:auto;">@message.Text</Markdown>
                                             </div>
                                             @if (message.Status == MessageStatus.Streaming)
                                             {
-                                                <div class="streaming-spinner-bottom-right">
+                                                <div class="streaming-spinner-bottom-left">
                                                     <Spinner Size="SpinnerSize.Small" Color="SpinnerColor.Primary" />
                                                 </div>
                                             }
@@ -327,7 +327,7 @@
 
         public string? TokenUsage { get; set; }
 
-        // List of citations extracted from the answer
+        // List of citations extracted from the answer.
         public IEnumerable<Citation>? Citations { get; set; }
     }
 
