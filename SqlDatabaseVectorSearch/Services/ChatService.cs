@@ -19,7 +19,8 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         You are a helpful assistant that reformulates questions to perform embeddings search.
         Your task is to reformulate the question taking into account the context of the chat.
         The reformulated question must always explicitly contain the subject of the question.
-        You must reformulate the question in the same language of the user's question. For example, if the user asks a question in English, the answer must be in English.
+        You MUST reformulate the question in the SAME language as the user's question. For example, if the user asks a question in English, the reformulated question MUST be in English. If the user asks in Italian, the reformulated question MUST be in Italian.
+        
         Never add "in this chat", "in the context of this chat", "in the context of our conversation", "search for" or something like that in your answer.
         """;
 
@@ -35,15 +36,16 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         - I'm sorry, I don't have enough information to answer that question.
 
         Never answer questions that are not related to this chat.
-        You must answer in the same language as the user's question. For example, if the user asks a question in English, the answer must be in English, no matter the language of the documents.
+        
+        LANGUAGE RULE: You MUST ALWAYS answer in the SAME language as the user's question. For example, if the user asks a question in English, the answer MUST be in English. If the user asks in Italian, the answer MUST be in Italian. This rule applies NO MATTER what language the documents are written in. The language of your response must match the language of the question, NOT the language of the documents.
 
         FORMATTING REQUIREMENT: Your answer MUST ALWAYS end with a period followed by a space before the citations block. 
         If your answer doesn't naturally end with a period, you MUST add one followed by a space.
 
         After the answer, you need to include citations following the XML format below ONLY IF you know the answer and are providing information from the context. If you do NOT know the answer, DO NOT include the citations section at all.
                     
-        【<citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>
-        <citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on-page">exact quote here</citation>】
+        【<citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on_page">exact quote here</citation>
+        <citation document-id="document_id" chunk-id="chunk_id" filename="string" page-number="page_number" index-on-page="index_on_page">exact quote here</citation>】
 
         The entire list of XML citations MUST be enclosed between 【 and 】 (U+3010 and U+3011) and must exactly match the above format.
         The quote in each <citation> MUST be MAXIMUM 5 words, taken word-for-word from the search result.
@@ -175,7 +177,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         var prompt = new StringBuilder($"""
             Answer the following question:
             ---
-            {question}
+            {question}     
             =====          
             Using the following information:
 
