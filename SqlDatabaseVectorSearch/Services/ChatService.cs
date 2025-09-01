@@ -20,7 +20,8 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         Your task is to reformulate the question taking into account the context of the chat.
         The reformulated question must always explicitly contain the subject of the question.
         You MUST reformulate the question in the SAME language as the user's question. For example, if the user asks a question in English, the reformulated question MUST be in English. If the user asks in Italian, the reformulated question MUST be in Italian.
-        
+
+        If asking a clarifying question to the user would help, ask the question.
         Never add "in this chat", "in the context of this chat", "in the context of our conversation", "search for" or something like that in your answer.
         """;
 
