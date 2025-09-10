@@ -28,7 +28,7 @@ public class DocumentService(ApplicationDbContext dbContext)
     public async Task<DocumentChunk?> GetChunkEmbeddingAsync(Guid documentId, Guid documentChunkId, CancellationToken cancellationToken = default)
     {
         var documentChunk = await dbContext.DocumentChunks.Where(c => c.Id == documentChunkId && c.DocumentId == documentId)
-            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.PageNumber, c.IndexOnPage, c.Embedding))
+            .Select(c => new DocumentChunk(c.Id, c.Index, c.Content, c.PageNumber, c.IndexOnPage, c.Embedding.Memory.ToArray()))
             .FirstOrDefaultAsync(cancellationToken);
 
         return documentChunk;

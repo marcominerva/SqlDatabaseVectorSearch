@@ -1,4 +1,6 @@
-﻿namespace SqlDatabaseVectorSearch.Data.Entities;
+﻿using Microsoft.Data.SqlTypes;
+
+namespace SqlDatabaseVectorSearch.Data.Entities;
 
 public class DocumentChunk
 {
@@ -14,7 +16,7 @@ public class DocumentChunk
 
     public required string Content { get; set; }
 
-    public required float[] Embedding { get; set; }
+    public required SqlVector<float> Embedding { get; set; }
 
     public virtual Document Document { get; set; } = null!;
 }
