@@ -62,6 +62,7 @@ Embeddings and chat completion are powered by [Semantic Kernel](https://github.c
 
 2. Configure the database and OpenAI settings
    - Edit `SqlDatabaseVectorSearch/appsettings.json` and set your Azure SQL connection string and OpenAI settings.
+   - **Important**: The `ModelId` values for both `ChatCompletion` and `Embedding` are used for token counting via `Microsoft.ML.Tokenizers`. These values must be valid model identifiers supported by the tokenizer library (e.g., `gpt-4o`, `gpt-4`, `gpt-3.5-turbo`, `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`). The `ModelId` may differ from the actual deployment name you're using in Azure OpenAI. For example, for gpt-4.1 models set the `ModelId` to `gpt-4o` for proper token counting.
    - If using embedding models with shortening (e.g., `text-embedding-3-small` or `text-embedding-3-large`), set the `Dimensions` property accordingly. For `text-embedding-3-large`, you must specify a value <= 1998.
    - If you change the VECTOR size, update both the [ApplicationDbContext](SqlDatabaseVectorSearch/Data/ApplicationDbContext.cs) and the [Initial Migration](SqlDatabaseVectorSearch/Data/Migrations/00000000000000_Initial.cs).
 
