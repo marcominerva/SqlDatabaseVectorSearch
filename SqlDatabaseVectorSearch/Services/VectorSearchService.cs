@@ -58,7 +58,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
             foreach (var (index, embedding) in embeddings.Index())
             {
                 var chunk = chunks.ElementAt(index);
-                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(chunk.Content));
+                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountEmbeddingTokens(chunk.Content));
 
                 var documentChunk = new Entities.DocumentChunk
                 {
