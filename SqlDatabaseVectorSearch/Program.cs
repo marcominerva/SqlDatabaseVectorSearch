@@ -95,7 +95,7 @@ app.UseWhen(context => context.IsWebRequest(), builder =>
 {
     if (!app.Environment.IsDevelopment())
     {
-        builder.UseExceptionHandler("/error");
+        builder.UseExceptionHandler("/error", createScopeForErrors: true);
 
         // The default HSTS value is 30 days.
         builder.UseHsts();
