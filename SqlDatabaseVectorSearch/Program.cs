@@ -11,7 +11,6 @@ using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.TextChunkers;
 using TinyHelpers.AspNetCore.Extensions;
-using TinyHelpers.AspNetCore.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
@@ -32,10 +31,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddAzureSql<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), options =>
-{
-    options.UseVectorSearch();
-}, options =>
+builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), optionsAction: options =>
 {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
@@ -79,8 +75,8 @@ builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddOpenApi(options =>
 {
-    options.RemoveServerList();
-    options.AddDefaultProblemDetailsResponse();
+    //options.RemoveServerList();
+    //options.AddDefaultProblemDetailsResponse();
 });
 
 ValidatorOptions.Global.LanguageManager.Enabled = false;
@@ -99,7 +95,7 @@ app.UseWhen(context => context.IsWebRequest(), builder =>
 {
     if (!app.Environment.IsDevelopment())
     {
-        builder.UseExceptionHandler("/error");
+        builder.UseExceptionHandler("/error", createScopeForErrors: true);
 
         // The default HSTS value is 30 days.
         builder.UseHsts();

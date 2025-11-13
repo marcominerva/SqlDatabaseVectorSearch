@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
@@ -57,7 +58,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
             foreach (var (index, embedding) in embeddings.Index())
             {
                 var chunk = chunks.ElementAt(index);
-                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountChatCompletionTokens(chunk.Content));
+                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountEmbeddingTokens(chunk.Content));
 
                 var documentChunk = new Entities.DocumentChunk
                 {
@@ -66,7 +67,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
                     PageNumber = chunk.PageNumber,
                     IndexOnPage = chunk.IndexOnPage,
                     Content = chunk.Content,
-                    Embedding = embedding.Vector.ToArray()
+                    Embedding = new SqlVector<float>(embedding.Vector)
                 };
 
                 dbContext.DocumentChunks.Add(documentChunk);
@@ -149,9 +150,10 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
 
         // Perform Vector Search on SQL Database.
         var questionEmbedding = await embeddingGenerator.GenerateVectorAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
+        var embeddingVector = new SqlVector<float>(questionEmbedding);
 
         var chunks = await dbContext.DocumentChunks.Include(c => c.Document)
-                    .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, questionEmbedding.ToArray()))
+                    .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, embeddingVector))
                     .Take(appSettings.MaxRelevantChunks)
                     .ToListAsync(cancellationToken);
 

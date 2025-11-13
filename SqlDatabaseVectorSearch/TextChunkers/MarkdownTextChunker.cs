@@ -11,8 +11,8 @@ public class MarkdownTextChunker(TokenizerService tokenizerService, IOptions<App
 
     public IList<string> Split(string text)
     {
-        var lines = TextChunker.SplitMarkDownLines(text, appSettings.MaxTokensPerLine, tokenizerService.CountChatCompletionTokens);
-        var paragraphs = TextChunker.SplitMarkdownParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountChatCompletionTokens);
+        var lines = TextChunker.SplitMarkDownLines(text, appSettings.MaxTokensPerLine, tokenizerService.CountEmbeddingTokens);
+        var paragraphs = TextChunker.SplitMarkdownParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountEmbeddingTokens);
 
         return paragraphs;
     }

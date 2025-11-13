@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -34,7 +35,7 @@ namespace SqlDatabaseVectorSearch.Migrations
                     PageNumber = table.Column<int>(type: "int", nullable: true),
                     IndexOnPage = table.Column<int>(type: "int", nullable: false),
                     Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Embedding = table.Column<string>(type: "vector(1536)", nullable: false)
+                    Embedding = table.Column<SqlVector<float>>(type: "vector(1536)", nullable: false)
                 },
                 constraints: table =>
                 {
