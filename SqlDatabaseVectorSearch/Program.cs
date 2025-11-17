@@ -11,6 +11,7 @@ using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.TextChunkers;
 using TinyHelpers.AspNetCore.Extensions;
+using TinyHelpers.AspNetCore.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
@@ -75,8 +76,8 @@ builder.Services.AddScoped<VectorSearchService>();
 
 builder.Services.AddOpenApi(options =>
 {
-    //options.RemoveServerList();
-    //options.AddDefaultProblemDetailsResponse();
+    options.RemoveServerList();
+    options.AddDefaultProblemDetailsResponse();
 });
 
 ValidatorOptions.Global.LanguageManager.Enabled = false;
