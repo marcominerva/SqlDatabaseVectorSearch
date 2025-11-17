@@ -86,7 +86,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
         Remember to ALWAYS end your answer with a period followed by a space before adding citations.
         """;
 
-    public async Task<ChatResponse> CreateQuestionAsync(Guid conversationId, string question, CancellationToken cancellationToken = default)
+    public async Task<ChatResponse> CreateReformulateQuestionAsync(Guid conversationId, string question, CancellationToken cancellationToken = default)
     {
         var chat = await GetChatHistoryAsync(conversationId, cancellationToken);
 
@@ -170,10 +170,9 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
     {
         var settings = new AzureOpenAIPromptExecutionSettings
         {
-            MaxTokens = appSettings.MaxOutputTokens
+            MaxTokens = appSettings.MaxOutputTokens,
+            ChatSystemPrompt = systemPromptForAnswering
         };
-
-        var chat = new ChatHistory(systemPromptForAnswering);
 
         var prompt = new StringBuilder($"""
             Answer the following question:
@@ -210,6 +209,7 @@ public class ChatService(IChatCompletionService chatCompletionService, Tokenizer
             }
         }
 
+        var chat = new ChatHistory();
         chat.AddUserMessage(prompt.ToString());
 
         return (chat, settings);

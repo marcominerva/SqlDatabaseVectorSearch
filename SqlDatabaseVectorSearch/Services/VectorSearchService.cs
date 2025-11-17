@@ -143,7 +143,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
     private async Task<(ChatResponse ReformulatedQuestion, int EmbeddingTokenCount, IEnumerable<Entities.DocumentChunk> Chunks)> CreateContextAsync(Question question, bool reformulate, CancellationToken cancellationToken)
     {
         // Reformulate the question taking into account the context of the chat to perform keyword search and embeddings.
-        var reformulatedQuestion = reformulate ? await chatService.CreateQuestionAsync(question.ConversationId, question.Text, cancellationToken) : new(question.Text);
+        var reformulatedQuestion = reformulate ? await chatService.CreateReformulateQuestionAsync(question.ConversationId, question.Text, cancellationToken) : new(question.Text);
 
         var embeddingTokenCount = tokenizerService.CountEmbeddingTokens(reformulatedQuestion.Text!);
         logger.LogDebug("Embedding Token Count: {EmbeddingTokenCount}", embeddingTokenCount);
