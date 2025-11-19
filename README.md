@@ -1,11 +1,10 @@
 # SQL Database Vector Search Sample
 
-[![.NET 9](https://img.shields.io/badge/.NET-9-blue)](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+[![.NET 10](https://img.shields.io/badge/.NET-10-blue)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 [![Minimal API](https://img.shields.io/badge/Minimal%20API-Available-green)](https://dotnet.microsoft.com/apps/aspnet/apis)
 [![Blazor](https://img.shields.io/badge/Blazor-WebApp-purple)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
 
 A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generation) and vector search using the native VECTOR type in Azure SQL Database and Azure OpenAI.
-
 
 ## Table of Contents
 - [Overview](#overview)
