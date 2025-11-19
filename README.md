@@ -27,7 +27,7 @@ This application allows you to:
 - Perform semantic search and RAG using Azure OpenAI
 - Interact via a Blazor Web App or programmatically via Minimal API
 
-Embeddings and chat completion are powered by [Semantic Kernel](https://github.com/microsoft/semantic-kernel). Vectors are managed with [EFCore.SqlServer.VectorSearch](https://github.com/efcore/EfCore.SqlServer.VectorSearch).
+Embeddings and chat completion are powered by [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
 
 ## Screenshots
 
@@ -38,7 +38,7 @@ Embeddings and chat completion are powered by [Semantic Kernel](https://github.c
 ![SQL Database Vector Search API](https://github.com/marcominerva/SqlDatabaseVectorSearch/blob/master/assets/SqlDatabaseVectorSearch_API.png)
 
 ## Prerequisites
-- [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 - [Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart)
 - Azure OpenAI resource and API keys
 
