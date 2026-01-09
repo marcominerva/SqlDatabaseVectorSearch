@@ -152,7 +152,7 @@ public partial class VectorSearchService(IServiceProvider serviceProvider, Appli
         var questionEmbedding = await embeddingGenerator.GenerateVectorAsync(reformulatedQuestion.Text!, cancellationToken: cancellationToken);
         var embeddingVector = new SqlVector<float>(questionEmbedding);
 
-        var chunks = await dbContext.DocumentChunks.Include(c => c.Document)
+        var chunks = await dbContext.DocumentChunks.Include(c => c.Document)                    
                     .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, embeddingVector))
                     .Take(appSettings.MaxRelevantChunks)
                     .ToListAsync(cancellationToken);
