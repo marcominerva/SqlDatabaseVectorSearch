@@ -14,7 +14,7 @@ public class DocxContentDecoder(IServiceProvider serviceProvider) : IContentDeco
         // Open a Word document for read-only access.
         using var document = WordprocessingDocument.Open(stream, false);
 
-        var body = document.MainDocumentPart?.Document.Body;
+        var body = document.MainDocumentPart?.Document?.Body;
         var content = new StringBuilder();
 
         foreach (var p in body?.Descendants<Paragraph>() ?? [])
