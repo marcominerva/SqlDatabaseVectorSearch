@@ -10,26 +10,26 @@
     <ItemGroup>
         <PackageReference Include="Blazor.Bootstrap" Version="3.5.0" />
         <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
-        <PackageReference Include="EntityFrameworkCore.Exceptions.SqlServer" Version="10.0.0" />
+        <PackageReference Include="EntityFrameworkCore.Exceptions.SqlServer" Version="10.0.1" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.7" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.7">
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.9">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.5.0" />
-        <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.5.0" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.7.0" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.7.0" />
         <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
-        <PackageReference Include="Microsoft.SemanticKernel" Version="1.76.0" />
+        <PackageReference Include="Microsoft.SemanticKernel" Version="1.77.0" />
         <PackageReference Include="MimeMapping" Version="4.0.0" />
         <PackageReference Include="MinimalHelpers.FluentValidation" Version="1.1.8" />
         <PackageReference Include="MinimalHelpers.Routing.Analyzers" Version="1.2.2" />
         <PackageReference Include="PdfPig" Version="0.1.14" />
-        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.1.7" />
-        <PackageReference Include="TinyHelpers.AspNetCore" Version="4.1.21" />
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.1" />
+        <PackageReference Include="TinyHelpers.AspNetCore" Version="4.2.12" />
     </ItemGroup>
 
 </Project>
