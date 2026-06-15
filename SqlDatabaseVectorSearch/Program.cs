@@ -1,8 +1,11 @@
+using System.ClientModel;
 using System.Net.Mime;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.SemanticKernel;
+using Microsoft.Extensions.AI;
+using OpenAI;
+using OpenAI.Responses;
 using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.Data;
@@ -54,11 +57,25 @@ builder.Services.ConfigureHttpClientDefaults(configure =>
     });
 });
 
-// Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
-// so that embeddings themselves can be generated more accurately.
-builder.Services.AddKernel()
-    .AddAzureOpenAIEmbeddingGenerator(aiSettings.Embedding.Deployment, aiSettings.Embedding.Endpoint, aiSettings.Embedding.ApiKey, modelId: aiSettings.Embedding.ModelId, dimensions: aiSettings.Embedding.Dimensions)
-    .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey, modelId: aiSettings.ChatCompletion.ModelId);
+builder.Services.AddSingleton(_ =>
+{
+    var embeddingClient = new OpenAIClient(new ApiKeyCredential(aiSettings.Embedding.ApiKey), new()
+    {
+        Endpoint = new(aiSettings.Embedding.Endpoint),
+    }).GetEmbeddingClient(aiSettings.Embedding.Deployment).AsIEmbeddingGenerator(aiSettings.Embedding.Dimensions);
+
+    return embeddingClient;
+});
+
+builder.Services.AddChatClient(_ =>
+{
+    var chatClient = new OpenAIClient(new ApiKeyCredential(aiSettings.ChatCompletion.ApiKey), new()
+    {
+        Endpoint = new(aiSettings.ChatCompletion.Endpoint),
+    }).GetResponsesClient().AsIChatClientWithStoredOutputDisabled(aiSettings.ChatCompletion.Deployment);
+
+    return chatClient;
+});
 
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
