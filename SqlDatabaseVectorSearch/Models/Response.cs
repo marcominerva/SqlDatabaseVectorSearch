@@ -8,3 +8,5 @@ public record class Response(string? OriginalQuestion, string? ReformulatedQuest
     {
     }
 }
+
+public record class RagResponse(Guid ConversationId, string OriginalQuestion, string ReformulatedQuestion, string Answer);

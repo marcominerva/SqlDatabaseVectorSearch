@@ -4,7 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <NoWarn>$(NoWarn);SKEXP0010;SKEXP0050;OPENAI001;MAAI001</NoWarn>
+        <NoWarn>$(NoWarn);SKEXP0010;SKEXP0050;OPENAI001;MAAI001;MEAI001</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -34,7 +34,6 @@
         <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
         <PackageReference Include="Microsoft.ML.Tokenizers.Data.O200kBase" Version="2.0.0" />
-        <PackageReference Include="Microsoft.SemanticKernel" Version="1.77.0" />
         <PackageReference Include="MimeMapping" Version="4.0.0" />
         <PackageReference Include="MinimalHelpers.FluentValidation" Version="1.1.8" />
         <PackageReference Include="MinimalHelpers.Routing.Analyzers" Version="1.2.2" />

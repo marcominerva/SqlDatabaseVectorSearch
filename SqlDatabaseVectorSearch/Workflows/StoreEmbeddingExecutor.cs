@@ -7,7 +7,7 @@ using Entities = SqlDatabaseVectorSearch.Data.Entities;
 
 namespace SqlDatabaseVectorSearch.Workflows;
 
-public partial class StoreEmbeddingExecutor(ApplicationDbContext dbContext, DocumentService documentService, TokenizerService tokenizerService, TimeProvider timeProvider, ILogger<VectorSearchService> logger) : Executor(nameof(StoreEmbeddingExecutor))
+public partial class StoreEmbeddingExecutor(ApplicationDbContext dbContext, DocumentService documentService, TokenizerService tokenizerService, TimeProvider timeProvider, ILogger<StoreEmbeddingExecutor> logger) : Executor(nameof(StoreEmbeddingExecutor))
 {
     [MessageHandler]
     private async ValueTask<StoreEmbeddingResponse> HandleAsync(EmbeddingResponse embeddingData, IWorkflowContext context, CancellationToken cancellationToken)

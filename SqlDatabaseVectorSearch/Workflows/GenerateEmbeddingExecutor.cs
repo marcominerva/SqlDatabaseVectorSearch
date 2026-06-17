@@ -2,13 +2,12 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using SqlDatabaseVectorSearch.ContentDecoders;
-using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Workflows;
 
-public partial class GenerateEmbeddingExecutor(IServiceProvider serviceProvider, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger) : Executor(nameof(GenerateEmbeddingExecutor))
+public partial class GenerateEmbeddingExecutor(IServiceProvider serviceProvider, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions, ILogger<GenerateEmbeddingExecutor> logger) : Executor(nameof(GenerateEmbeddingExecutor))
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
