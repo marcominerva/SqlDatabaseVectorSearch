@@ -2,8 +2,11 @@ using System.ClientModel;
 using System.Net.Mime;
 using System.Text.Json.Serialization;
 using FluentValidation;
+using Microsoft.Agents.AI.Hosting;
+using Microsoft.Agents.AI.Workflows;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.SemanticKernel;
 using OpenAI;
 using OpenAI.Responses;
 using SqlDatabaseVectorSearch.Components;
@@ -13,6 +16,7 @@ using SqlDatabaseVectorSearch.Extensions;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.TextChunkers;
+using SqlDatabaseVectorSearch.Workflows;
 using TinyHelpers.AspNetCore.Extensions;
 using TinyHelpers.AspNetCore.OpenApi;
 
@@ -77,6 +81,11 @@ builder.Services.AddChatClient(_ =>
     return chatClient;
 });
 
+// Semantic Kernel is used to generate embeddings and to reformulate questions taking into account all the previous interactions,
+// so that embeddings themselves can be generated more accurately.
+builder.Services.AddKernel()
+    .AddAzureOpenAIChatCompletion(aiSettings.ChatCompletion.Deployment, aiSettings.ChatCompletion.Endpoint, aiSettings.ChatCompletion.ApiKey, modelId: aiSettings.ChatCompletion.ModelId);
+
 builder.Services.AddKeyedSingleton<IContentDecoder, PdfContentDecoder>(MediaTypeNames.Application.Pdf);
 builder.Services.AddKeyedSingleton<IContentDecoder, DocxContentDecoder>("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 builder.Services.AddKeyedSingleton<IContentDecoder, TextContentDecoder>(MediaTypeNames.Text.Plain);
@@ -90,6 +99,25 @@ builder.Services.AddSingleton<ChatService>();
 
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<VectorSearchService>();
+
+builder.Services.AddSingleton<FormFileToEmbeddingRequestExecutor>();
+builder.Services.AddSingleton<GenerateEmbeddingExecutor>();
+builder.Services.AddScoped<StoreEmbeddingExecutor>();   // This executor is registered as scoped because it uses the DbContext, which is also scoped.
+
+builder.AddWorkflow("EmbeddingWorkflow", (services, key) =>
+{
+    var formfileToConversionRequestExecutor = services.GetRequiredService<FormFileToEmbeddingRequestExecutor>();
+    var generateEmbeddingExecutor = services.GetRequiredService<GenerateEmbeddingExecutor>();
+    var storeEmbeddingExecutor = services.GetRequiredService<StoreEmbeddingExecutor>();
+
+    var workflow = new WorkflowBuilder(formfileToConversionRequestExecutor).WithName(key)
+        .AddEdge(formfileToConversionRequestExecutor, generateEmbeddingExecutor)
+        .AddEdge(generateEmbeddingExecutor, storeEmbeddingExecutor)
+        .WithOutputFrom(storeEmbeddingExecutor)
+        .Build(validateOrphans: true);
+
+    return workflow;
+}, ServiceLifetime.Scoped);
 
 builder.Services.AddOpenApi(options =>
 {

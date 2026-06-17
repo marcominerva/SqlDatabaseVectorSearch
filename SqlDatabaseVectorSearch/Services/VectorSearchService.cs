@@ -2,84 +2,37 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.Agents.AI.Workflows;
 using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Settings;
+using SqlDatabaseVectorSearch.Workflows;
 using ChatResponse = SqlDatabaseVectorSearch.Models.ChatResponse;
 using Entities = SqlDatabaseVectorSearch.Data.Entities;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public partial class VectorSearchService(IServiceProvider serviceProvider, ApplicationDbContext dbContext, DocumentService documentService, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
+public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")] Workflow workflow, ApplicationDbContext dbContext, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, ChatService chatService, TimeProvider timeProvider, IOptions<AppSettings> appSettingsOptions, ILogger<VectorSearchService> logger)
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
-    public async Task<ImportDocumentResponse> ImportAsync(Stream stream, string name, string contentType, Guid? documentId, CancellationToken cancellationToken = default)
+    public async Task<StoreEmbeddingResponse> ImportAsync(FormFileEmbeddingRequest request, CancellationToken cancellationToken = default)
     {
-        // Extract the contents of the file.
-        var decoder = serviceProvider.GetKeyedService<IContentDecoder>(contentType) ?? throw new NotSupportedException($"Content type '{contentType}' is not supported.");
-        var chunks = await decoder.DecodeAsync(stream, contentType, cancellationToken);
-        var chunkContents = chunks.Select(p => p.Content).ToList();
+        await using var run = await InProcessExecution.RunAsync(workflow, request, cancellationToken: cancellationToken);
+        var events = run.NewEvents.ToList();
 
-        // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
-        var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", chunkContents));
-
-        var strategy = dbContext.Database.CreateExecutionStrategy();
-        var document = await strategy.ExecuteAsync(async (cancellationToken) =>
+        var exception = events.OfType<WorkflowErrorEvent>().Select(e => e.Exception).FirstOrDefault();
+        if (exception is not null)
         {
-            await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            throw exception;
+        }
 
-            if (documentId.HasValue)
-            {
-                // If the user is importing a document that already exists, delete the previous one.
-                await documentService.DeleteAsync(documentId.Value, cancellationToken);
-            }
-
-            var document = new Entities.Document { Id = documentId.GetValueOrDefault(), Name = name, CreationDate = timeProvider.GetUtcNow() };
-            dbContext.Documents.Add(document);
-
-            // Process paragraphs in batches.
-            var embeddings = new List<Embedding<float>>();
-            foreach (var batch in chunkContents.Chunk(appSettings.EmbeddingBatchSize))
-            {
-                logger.LogDebug("Processing batch of {Count} chunks for embedding generation...", batch.Length);
-
-                // Generate embeddings for this batch.
-                var batchEmbeddings = await embeddingGenerator.GenerateAsync(batch, cancellationToken: cancellationToken);
-                embeddings.AddRange(batchEmbeddings);
-            }
-
-            // Save the document chunks and the corresponding embedding in the database.
-            foreach (var (index, embedding) in embeddings.Index())
-            {
-                var chunk = chunks.ElementAt(index);
-                logger.LogDebug("Storing a chunk of {TokenCount} tokens.", tokenizerService.CountEmbeddingTokens(chunk.Content));
-
-                var documentChunk = new Entities.DocumentChunk
-                {
-                    Document = document,
-                    Index = index,
-                    PageNumber = chunk.PageNumber,
-                    IndexOnPage = chunk.IndexOnPage,
-                    Content = chunk.Content,
-                    Embedding = new SqlVector<float>(embedding.Vector)
-                };
-
-                dbContext.DocumentChunks.Add(documentChunk);
-            }
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-            await dbContext.Database.CommitTransactionAsync(cancellationToken);
-
-            return document;
-        }, cancellationToken);
-
-        return new(document.Id, tokenCount);
+        var result = events.OfType<WorkflowOutputEvent>().Select(e => e.Data).OfType<StoreEmbeddingResponse>().First();
+        return result;
     }
 
     public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)

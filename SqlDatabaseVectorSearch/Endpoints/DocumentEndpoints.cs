@@ -1,9 +1,9 @@
 ﻿
 using System.ComponentModel;
 using Microsoft.AspNetCore.Http.HttpResults;
-using MimeMapping;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
+using SqlDatabaseVectorSearch.Workflows;
 
 namespace SqlDatabaseVectorSearch.Endpoints;
 
@@ -23,12 +23,8 @@ public class DocumentEndpoints : IEndpointRouteHandlerBuilder
         documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
             [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
         {
-            using var stream = file.OpenReadStream();
-
-            // Note: file.ContentType is not 100% reliable (for example, for markdown file).
-            var response = await vectorSearchService.ImportAsync(stream, file.FileName, MimeUtility.GetMimeMapping(file.FileName), documentId, cancellationToken);
-
-            return TypedResults.Ok(response);
+            var result = await vectorSearchService.ImportAsync(new FormFileEmbeddingRequest(file, documentId), cancellationToken);
+            return TypedResults.Ok(result);
         })
         .DisableAntiforgery()
         .ProducesProblem(StatusCodes.Status400BadRequest)
