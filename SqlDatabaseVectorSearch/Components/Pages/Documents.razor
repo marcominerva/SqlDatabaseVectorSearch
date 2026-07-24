@@ -1,7 +1,7 @@
 ﻿@page "/documents"
 @using MimeMapping
 
-@inject IServiceProvider ServiceProvider
+@inject IServiceScopeFactory ServiceScopeFactory
 @inject IJSRuntime JSRuntime
 
 <ConfirmDialog @ref="dialog" />
@@ -127,7 +127,7 @@ else
             return;
         }
 
-        await using var scope = ServiceProvider.CreateAsyncScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         await LoadDocumentsAsync(scope.ServiceProvider);
 
         StateHasChanged();
@@ -173,7 +173,7 @@ else
             await using var inputStream = Model.File.OpenReadStream(20 * 1024 * 1024); // 20 MB
             await using var stream = await inputStream.GetMemoryStreamAsync();
 
-            await using var scope = ServiceProvider.CreateAsyncScope();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
             var documentId = string.IsNullOrWhiteSpace(Model.DocumentId) ? null : (Guid?)Guid.Parse(Model.DocumentId);
@@ -223,7 +223,7 @@ else
         {
             deleteButton.ShowLoading();
 
-            await using var scope = ServiceProvider.CreateAsyncScope();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var documentService = scope.ServiceProvider.GetRequiredService<DocumentService>();
 
             await documentService.DeleteAsync(selectedDocumentIds);

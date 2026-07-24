@@ -159,24 +159,23 @@ var textSearchOptions = new TextSearchProviderOptions()
         sb.AppendLine("Use the excerpts below to answer the user.");
         sb.AppendLine("Citation rules:");
         sb.AppendLine("- Do NOT add inline citations.");
-        sb.AppendLine("- At the END of your answer, add a single line exactly like:");
-        sb.AppendLine("  Sources: [SourceName](SourceLink), [SourceName](SourceLink)");
+        sb.AppendLine("- At the END of your answer, add a sources label translated in the same language as the user's question.");
+        sb.AppendLine("- The sources label MUST be standard-size italic Markdown text, not a heading and not bold. For example: *Sources* or *Fonti*.");
+        sb.AppendLine("- The citation list MUST be a numbered Markdown list.");
+        sb.AppendLine("- Format each citation with the source name and the localized page label, followed by a Markdown block quote of about 20-30 words from the excerpt that supports the answer.");
+        sb.AppendLine("- The block quote MUST start on a new line with the '>' Markdown character.");
+        sb.AppendLine("- Format each source exactly like:");
+        sb.AppendLine("  *Sources*");
+        sb.AppendLine("  1. SourceName, localized-page-label PageNumber");
+        sb.AppendLine("     > Supporting excerpt quote of about 20-30 words.");
+        sb.AppendLine("- Do NOT format source names as links.");
         sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
         sb.AppendLine();
 
         sb.AppendLine("### Sources (copy/paste-ready)");
         foreach (var (i, r) in results.Index())
         {
-            var name = string.IsNullOrWhiteSpace(r.SourceName) ? $"Source {i + 1}" : r.SourceName;
-
-            if (!string.IsNullOrWhiteSpace(r.SourceLink))
-            {
-                sb.AppendLine($"- [{name}]({r.SourceLink})");
-            }
-            else
-            {
-                sb.AppendLine($"- {name}");
-            }
+            sb.AppendLine($"- {GetSourceName(r, i)}");
         }
 
         sb.AppendLine();
@@ -184,14 +183,21 @@ var textSearchOptions = new TextSearchProviderOptions()
         sb.AppendLine("### Excerpts");
         foreach (var (i, r) in results.Index())
         {
-            var name = string.IsNullOrWhiteSpace(r.SourceName) ? $"Source {i + 1}" : r.SourceName;
-
-            sb.AppendLine($"[{i + 1}] {name}");
+            sb.AppendLine($"[{i + 1}] {GetSourceName(r, i)}");
             sb.AppendLine(r.Text);
-            sb.AppendLine();
+            sb.AppendLine("---");
         }
 
         return sb.ToString();
+
+        static string GetSourceName(TextSearchProvider.TextSearchResult result, int index)
+        {
+            var name = string.IsNullOrWhiteSpace(result.SourceName) ? $"Source {index + 1}" : result.SourceName;
+            var pageNumber = result.RawRepresentation is int number ? number : (int?)null;
+            var pageText = pageNumber.HasValue ? $", page {pageNumber}" : string.Empty;
+
+            return $"{name}{pageText}";
+        }
     }
 };
 

@@ -105,7 +105,7 @@ public class ContextProvider(ApplicationDbContext dbContext, IEmbeddingGenerator
                         SourceLink = c.Id.ToString().ToLowerInvariant(),
                         SourceName = c.Document.Name,
                         Text = c.Content,
-                        RawRepresentation = new { c.Id, c.DocumentId, c.PageNumber, c.IndexOnPage, c.Content }
+                        RawRepresentation = c.PageNumber
                     })
                     .ToListAsync(cancellationToken);
 
