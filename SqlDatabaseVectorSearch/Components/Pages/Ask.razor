@@ -1,7 +1,7 @@
 ﻿@page "/ask"
-@using System.Text.RegularExpressions
+@using Microsoft.Extensions.AI
 
-@inject IServiceProvider ServiceProvider
+@inject IServiceScopeFactory ServiceScopeFactory
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Chat with your data</PageTitle>
@@ -176,7 +176,7 @@
 
         try
         {
-            await using var scope = ServiceProvider.CreateAsyncScope();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
             var response = vectorSearchService.AskStreamingAsync(userQuestion);
@@ -260,7 +260,7 @@
 
         return $"{reformulation}{question}";
 
-        static string FormatTokenUsageDetails(Microsoft.Extensions.AI.UsageDetails? tokenUsage)
+        static string FormatTokenUsageDetails(UsageDetails? tokenUsage)
         {
             if (tokenUsage is null)
             {
