@@ -117,6 +117,7 @@ builder.Services.AddAIAgent("ReformulationAgent", (services, key) =>
 
     return chatClient.AsAIAgent(new ChatClientAgentOptions()
     {
+        Id = key.ToLowerInvariant(),
         Name = key,
         ChatOptions = new()
         {
@@ -209,6 +210,7 @@ builder.Services.AddAIAgent("RagAgent", (services, key) =>
 
     return chatClient.AsAIAgent(new ChatClientAgentOptions
     {
+        Id = key.ToLowerInvariant(),
         Name = key,
         ChatOptions = new()
         {

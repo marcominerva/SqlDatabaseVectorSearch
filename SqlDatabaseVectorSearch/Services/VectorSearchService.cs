@@ -84,7 +84,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
         await sessionStore.SaveSessionAsync(ragAgent, question.ConversationId.ToString(), session, cancellationToken);
         var response = updates.ToAgentResponse();
 
-        yield return new(question.ConversationId, null, null, response.Text, StreamState.End, new TokenUsageResponse(null, response.Usage));
+        yield return new(question.ConversationId, StreamState.End, new TokenUsageResponse(null, response.Usage));
     }
 }
 
@@ -105,6 +105,7 @@ public class ContextProvider(ApplicationDbContext dbContext, IEmbeddingGenerator
                         SourceLink = c.Id.ToString().ToLowerInvariant(),
                         SourceName = c.Document.Name,
                         Text = c.Content,
+                        RawRepresentation = new { c.Id, c.DocumentId, c.PageNumber, c.IndexOnPage, c.Content }
                     })
                     .ToListAsync(cancellationToken);
 
