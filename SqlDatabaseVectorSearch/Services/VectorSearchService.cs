@@ -15,10 +15,8 @@ using SqlDatabaseVectorSearch.Workflows;
 namespace SqlDatabaseVectorSearch.Services;
 
 public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")] Workflow workflow, [FromKeyedServices("ReformulationAgent")] AIAgent reformulationAgent, [FromKeyedServices("RagAgent")] AIAgent ragAgent,
-    [FromKeyedServices("RagAgent")] AgentSessionStore sessionStore, IOptions<AppSettings> appSettingsOptions)
+    [FromKeyedServices("RagAgent")] AgentSessionStore sessionStore)
 {
-    private readonly AppSettings appSettings = appSettingsOptions.Value;
-
     public async Task<StoreEmbeddingResponse> ImportAsync(FormFileEmbeddingRequest request, CancellationToken cancellationToken = default)
     {
         await using var run = await InProcessExecution.RunAsync(workflow, request, cancellationToken: cancellationToken);
@@ -34,8 +32,9 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
         return result;
     }
 
-    public async Task<RagResponse> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
+    public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
     {
+        UsageDetails? reformulationUsage = null;
         var reformulatedQuestion = question.Text;
         var session = await sessionStore.GetSessionAsync(ragAgent, question.ConversationId.ToString(), cancellationToken);
 
@@ -44,62 +43,48 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
             // Reformulates the question taking into account the context of the chat to perform keyword search and embeddings.
             var reformulationResponse = await reformulationAgent.RunAsync(question.Text, session, cancellationToken: cancellationToken);
             reformulatedQuestion = reformulationResponse.Text;
+            reformulationUsage = reformulationResponse.Usage;
         }
 
         var response = await ragAgent.RunAsync(reformulatedQuestion, session, cancellationToken: cancellationToken);
 
         await sessionStore.SaveSessionAsync(ragAgent, question.ConversationId.ToString(), session, cancellationToken);
 
-        session.TryGetInMemoryChatHistory(out var chatHistory);
-
-        return new(question.ConversationId, question.Text, reformulatedQuestion, response.Text);
+        return new(question.ConversationId, question.Text, reformulatedQuestion, response.Text, null, new TokenUsageResponse(reformulationUsage, response.Usage));
     }
 
     public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        yield return null!;
+        UsageDetails? reformulationUsage = null;
+        var reformulatedQuestion = question.Text;
+        var session = await sessionStore.GetSessionAsync(ragAgent, question.ConversationId.ToString(), cancellationToken);
 
-        //// It the user doesn't want to reforulate the question, CreateContextAsync returns the original one.
-        //var (reformulatedQuestion, embeddingTokenCount, chunks) = await CreateContextAsync(question, reformulate, cancellationToken);
+        if (reformulate)
+        {
+            // Reformulates the question taking into account the context of the chat to perform keyword search and embeddings.
+            var reformulationResponse = await reformulationAgent.RunAsync(question.Text, session, cancellationToken: cancellationToken);
+            reformulatedQuestion = reformulationResponse.Text;
+            reformulationUsage = reformulationResponse.Usage;
+        }
 
-        //var answerStream = chatService.AskStreamingAsync(question.ConversationId, chunks, reformulatedQuestion.Text!, cancellationToken: cancellationToken);
+        // The first message contains the question and the corresponding token usage (if reformulated).
+        yield return new(question.ConversationId, question.Text, reformulatedQuestion, null, StreamState.Start, new(reformulationUsage, null));
 
-        //// The first message contains the question and the corresponding token usage (if reformulated).
-        //yield return new(question.Text, reformulatedQuestion.Text!, null, StreamState.Start, new(reformulatedQuestion.TokenUsage, embeddingTokenCount, null));
+        var updates = new List<AgentResponseUpdate>();
 
-        //TokenUsageResponse? tokenUsageResponse = null;
-        //var fullAnswer = new StringBuilder();
-        //var citationsStarted = false;
+        await foreach (var update in ragAgent.RunStreamingAsync(reformulatedQuestion, session, cancellationToken: cancellationToken))
+        {
+            updates.Add(update);
+            if (!string.IsNullOrEmpty(update.Text))
+            {
+                yield return new(question.ConversationId, update.Text, StreamState.Append);
+            }
+        }
 
-        //// Returns each token as a partial response.
-        //await foreach (var (token, tokenUsage) in answerStream)
-        //{
-        //    if (token is not null) // token can be null when the stream ends. 
-        //    {
-        //        fullAnswer.Append(token);
+        await sessionStore.SaveSessionAsync(ragAgent, question.ConversationId.ToString(), session, cancellationToken);
+        var response = updates.ToAgentResponse();
 
-        //        if (token.Contains('【'))
-        //        {
-        //            // Citations start when we encounter a token containing a 【 character.
-        //            // We need to track it because we don't want to return the citations in the actual response.
-        //            citationsStarted = true;
-        //        }
-
-        //        if (!citationsStarted)
-        //        {
-        //            yield return new(token, StreamState.Append);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        // Token usage is expected in the last message, when token is null.
-        //        tokenUsageResponse ??= tokenUsage is not null ? new(tokenUsage) : null;
-        //    }
-        //}
-
-        //// Extract citations at the end of streaming.
-        //var (_, citations) = ExtractCitations(fullAnswer.ToString());
-        //yield return new(null, StreamState.End, tokenUsageResponse, citations);
+        yield return new(question.ConversationId, null, null, response.Text, StreamState.End, new TokenUsageResponse(null, response.Usage));
     }
 }
 

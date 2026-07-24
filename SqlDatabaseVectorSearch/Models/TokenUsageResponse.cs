@@ -1,9 +1,5 @@
-﻿namespace SqlDatabaseVectorSearch.Models;
+﻿using Microsoft.Extensions.AI;
 
-public record class TokenUsageResponse(TokenUsage? Reformulation, int? EmbeddingTokenCount, TokenUsage? Question)
-{
-    public TokenUsageResponse(TokenUsage? question)
-        : this(null, null, question)
-    {
-    }
-}
+namespace SqlDatabaseVectorSearch.Models;
+
+public record class TokenUsageResponse(UsageDetails? Reformulation, UsageDetails? Question);

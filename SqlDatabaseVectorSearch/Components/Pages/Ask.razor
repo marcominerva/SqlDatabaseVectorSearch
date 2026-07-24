@@ -83,23 +83,6 @@
                                                 </Tooltip>
                                             </div>
                                         </div>
-                                        @if (message.Citations is not null && message.Citations.Count() > 0)
-                                        {
-                                            <div class="mt-3 d-flex flex-wrap">
-                                                @foreach (var citation in message.Citations)
-                                                {
-                                                    <div class="border rounded p-2 me-2 mb-2 citation-box small">
-                                                        <div>
-                                                            <strong>@citation.FileName</strong> @if (citation.PageNumber.GetValueOrDefault() > 0)
-                                                            {
-                                                                <span class="ms-2">pag. @citation.PageNumber</span>
-                                                            }
-                                                        </div>
-                                                        <div class="text-secondary small mt-1">@citation.Quote</div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
                                     }
                                 </div>
                             }
@@ -212,17 +195,6 @@
                 }
                 else if (delta.StreamState == StreamState.End)
                 {
-                    // Get citations from the response.
-                    assistantMessage.Citations = delta.Citations?.Select(c => new Citation
-                    {
-                        DocumentId = c.DocumentId,
-                        ChunkId = c.ChunkId,
-                        FileName = c.FileName,
-                        Quote = c.Quote,
-                        PageNumber = c.PageNumber,
-                        IndexOnPage = c.IndexOnPage
-                    });
-
                     assistantMessage.Status = MessageStatus.Completed;
                     assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
                 }
@@ -282,26 +254,22 @@
             ? $"<p><strong>Reformulation:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Reformulation)}</p>"
             : string.Empty;
 
-        var embeddingTokenCount = tokenUsageResponse.EmbeddingTokenCount.HasValue
-            ? $"<p><strong>Embedding Token Count:</strong> {tokenUsageResponse.EmbeddingTokenCount}</p>"
-            : string.Empty;
-
         var question = tokenUsageResponse.Question is not null
             ? $"<p><strong>Question:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Question)}</p>"
             : string.Empty;
 
-        return $"{reformulation}{embeddingTokenCount}{question}";
+        return $"{reformulation}{question}";
 
-        static string FormatTokenUsageDetails(TokenUsage? tokenUsage)
+        static string FormatTokenUsageDetails(Microsoft.Extensions.AI.UsageDetails? tokenUsage)
         {
             if (tokenUsage is null)
             {
                 return string.Empty;
             }
 
-            return $"Prompt tokens: {tokenUsage.PromptTokens}<br />" +
-                   $"Completion tokens: {tokenUsage.CompletionTokens}<br />" +
-                   $"Total tokens: {tokenUsage.TotalTokens}";
+            return $"Input tokens: {tokenUsage.InputTokenCount}<br />" +
+                   $"Output tokens: {tokenUsage.OutputTokenCount}<br />" +
+                   $"Total tokens: {tokenUsage.TotalTokenCount}";
         }
     }
 
@@ -326,23 +294,5 @@
         public MessageStatus Status { get; set; } = MessageStatus.New;
 
         public string? TokenUsage { get; set; }
-
-        // List of citations extracted from the answer.
-        public IEnumerable<Citation>? Citations { get; set; }
-    }
-
-    public class Citation
-    {
-        public Guid DocumentId { get; set; }
-
-        public Guid ChunkId { get; set; }
-
-        public string FileName { get; set; } = null!;
-
-        public string Quote { get; set; } = null!;
-
-        public int? PageNumber { get; set; }
-
-        public int IndexOnPage { get; set; }
     }
 }
