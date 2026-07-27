@@ -159,17 +159,11 @@ var textSearchOptions = new TextSearchProviderOptions()
         sb.AppendLine("Use the excerpts below to answer the user.");
         sb.AppendLine("Citation rules:");
         sb.AppendLine("- Do NOT add inline citations.");
-        sb.AppendLine("- At the END of your answer, add a sources label translated in the same language as the user's question.");
-        sb.AppendLine("- The sources label MUST be standard-size italic Markdown text, not a heading and not bold, and MUST be localized in the same language as the user's question.");
-        sb.AppendLine("- The citation list MUST be a numbered Markdown list.");
-        sb.AppendLine("- The source name MUST be bold, followed by the localized page label and the page number ONLY when the page number is available, then a colon.");
-        sb.AppendLine("- After the colon, add about 15-20 words in italic taken from the excerpt that supports the answer.");
-        sb.AppendLine("- Format each source exactly like:");
+        sb.AppendLine("- At the END of your answer, add a sources section that follows this template exactly, where the sources label and the page label are localized in the same language as the user's question:");
         sb.AppendLine("  *localized-sources-label*");
         sb.AppendLine("  1. **SourceName**, localized-page-label PageNumber: *supporting excerpt of about 15-20 words*");
-        sb.AppendLine("  If the page number is not available, omit it and the page label, like:");
-        sb.AppendLine("  1. **SourceName**: *supporting excerpt of about 15-20 words*");
-        sb.AppendLine("- Do NOT format source names as links.");
+        sb.AppendLine("- Omit the page label and the page number when the page number is not available.");
+        sb.AppendLine("- Do NOT use headings or links in the sources section.");
         sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
         sb.AppendLine();
 
