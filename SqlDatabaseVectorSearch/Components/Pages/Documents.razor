@@ -130,7 +130,7 @@ else
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         await LoadDocumentsAsync(scope.ServiceProvider);
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadDocumentsAsync(IServiceProvider services)

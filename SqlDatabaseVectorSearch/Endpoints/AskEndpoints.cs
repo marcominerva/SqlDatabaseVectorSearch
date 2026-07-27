@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel;
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using MinimalHelpers.FluentValidation;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Services;
@@ -23,18 +25,18 @@ public class AskEndpoints : IEndpointRouteHandlerBuilder
         endpoints.MapPost("/api/ask-streaming", (Question question, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
             [Description("If true, the question will be reformulated taking into account the context of the chat identified by the given ConversationId.")] bool reformulate = true) =>
         {
-            async IAsyncEnumerable<Response> Stream()
+            async IAsyncEnumerable<SseItem<Response>> StreamAsync([EnumeratorCancellation] CancellationToken innerCancellationToken)
             {
                 // Requests a streaming response.
-                var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate, cancellationToken);
+                var responseStream = vectorSearchService.AskStreamingAsync(question, reformulate, innerCancellationToken);
 
                 await foreach (var delta in responseStream)
                 {
-                    yield return delta;
+                    yield return new(delta, delta.StreamState?.ToString());
                 }
             }
 
-            return Stream();
+            return TypedResults.ServerSentEvents(StreamAsync(cancellationToken));
         })
         .WithValidation<Question>()
         .WithSummary("Asks a question and gets the response as streaming")

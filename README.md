@@ -4,7 +4,7 @@
 [![Minimal API](https://img.shields.io/badge/Minimal%20API-Available-green)](https://dotnet.microsoft.com/apps/aspnet/apis)
 [![Blazor](https://img.shields.io/badge/Blazor-WebApp-purple)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
 
-A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generation) and vector search using the native VECTOR type in Azure SQL Database and Azure OpenAI.
+A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generation) and vector search using the native VECTOR type in Azure SQL Database, Azure OpenAI, and [Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
 
 ## Table of Contents
 - [Overview](#overview)
@@ -24,10 +24,10 @@ A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generat
 This application allows you to:
 - Load documents (PDF, DOCX, TXT, MD)
 - Generate embeddings and save them as vectors in Azure SQL Database
-- Perform semantic search and RAG using Azure OpenAI
+- Perform semantic search and RAG using Azure OpenAI and Microsoft Agent Framework agents
 - Interact via a Blazor Web App or programmatically via Minimal API
 
-Embeddings and chat completion are powered by [Semantic Kernel](https://github.com/microsoft/semantic-kernel).
+Embeddings and chat completion are orchestrated with [Microsoft Agent Framework](https://github.com/microsoft/agent-framework). The application uses an embedding workflow to import documents, a reformulation agent to rewrite follow-up questions with conversation context, and a RAG agent connected to a SQL vector-search context provider.
 
 ## Screenshots
 
@@ -49,6 +49,7 @@ Embeddings and chat completion are powered by [Semantic Kernel](https://github.c
   - `Endpoints/` - Minimal API endpoints
   - `Services/` - Business logic and integration services
   - `TextChunkers/` - Text splitting utilities
+  - `Workflows/` - Microsoft Agent Framework workflow executors for document import and embedding generation
   - `Settings/` - Configuration classes
 
 ## Setup
@@ -76,15 +77,25 @@ Embeddings and chat completion are powered by [Semantic Kernel](https://github.c
 
 ## Supported features
 
-- **Conversation History with Question Reformulation**: This feature allows users to view the history of their conversations, including the ability to reformulate questions for better clarity and understanding. This ensures that users can track their interactions and refine their queries as needed.
-- **Information about Token Usage**: Users can access detailed information about token usage, which helps in understanding the consumption of tokens during interactions. This feature provides transparency and helps users manage their token usage effectively.
-- **Response Streaming**: This feature enables real-time streaming of responses, allowing users to receive information as it is being processed. This ensures a seamless and efficient flow of information, enhancing the overall user experience.
-- **Citations**: The application provides citations for the sources used to justify each answer. This allows users to verify the information and understand the origin of the content provided by the system.
+- **Microsoft Agent Framework orchestration**: Document import is implemented as a workflow, while question reformulation and RAG are implemented as agents.
+- **Conversation history with question reformulation**: The reformulation agent rewrites each question using the conversation context before vector search is performed.
+- **SQL vector-search context provider**: The RAG agent receives relevant chunks from Azure SQL Database through a `TextSearchProvider` backed by native VECTOR search.
+- **Information about token usage**: The Blazor chat page and API responses expose token usage for reformulation and final answer generation.
+- **Response streaming**: The Blazor chat page uses streaming responses, appending answer tokens as they arrive.
+- **Markdown source citations**: Citations are included directly in the generated Markdown answer as a localized sources section with source name, page number when available, and a short supporting excerpt.
 
 ## How to Use
 
-- **Web App**: Use the Blazor interface to upload documents, search, and chat with RAG.
+- **Web App**: Use the Blazor interface to manage documents and chat with your indexed content. The chat page streams answers, shows token usage, supports conversation reset, and renders source citations as part of the Markdown answer.
 - **API**: Import documents via `POST /api/documents` and ask questions via `POST /api/ask` or `POST /api/ask-streaming`.
+
+### How it works
+
+1. Documents are uploaded through the API and processed by the `EmbeddingWorkflow`.
+2. The workflow converts the uploaded file into text, chunks it, generates embeddings, and stores documents, chunks, and VECTOR embeddings in Azure SQL Database.
+3. When a question is asked, the `ReformulationAgent` can rewrite it using the current conversation context.
+4. The `RagAgent` receives relevant SQL vector-search results through a `TextSearchProvider` and answers using only the provided context.
+5. Sources are not returned as a separate JSON collection. They are formatted directly in the Markdown answer.
 
 #### Example API Request
 ```
@@ -101,224 +112,58 @@ Content-Type: application/json
 
 ```json
 {
+  "conversationId": "3d0bd178-499d-433a-b2bc-c35e488d9e2c",
   "originalQuestion": "why is mars called the red planet?",
   "reformulatedQuestion": "Why is the planet Mars called the red planet?",
-  "answer": "Mars is called the Red Planet because its surface has an orange-red color due to being covered in iron(III) oxide dust, also known as rust. This iron oxide gives Mars its distinctive reddish appearance when observed from Earth and is the origin of its well-known nickname",
-  "streamState": "End",
+  "answer": "Mars is called the Red Planet because its surface has an orange-red color caused by iron oxide dust.\n\n*Sources*\n1. **Mars.pdf**, page 1: *surface of Mars is orange-red because it is covered in iron oxide dust*",
+  "streamState": null,
   "tokenUsage": {
     "reformulation": {
-      "promptTokens": 812,
-      "completionTokens": 11,
-      "totalTokens": 823
+      "inputTokenCount": 812,
+      "outputTokenCount": 11,
+      "totalTokenCount": 823
     },
-    "embeddingTokenCount": 10,
     "question": {
-      "promptTokens": 31708,
-      "completionTokens": 227,
-      "totalTokens": 31935
+      "inputTokenCount": 31708,
+      "outputTokenCount": 227,
+      "totalTokenCount": 31935
     }
-  },
-  "citations": [
-    {
-      "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
-      "chunkId": "749aba1e-0db5-4033-cfa6-08ddb0115da3",
-      "fileName": "Mars.pdf",
-      "quote": "surface of Mars is orange-red because it is covered in iron(III) oxide",
-      "pageNumber": 1,
-      "indexOnPage": 0
-    },
-    {
-      "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
-      "chunkId": "215e7197-513f-4fbe-cfa8-08ddb0115da3",
-      "fileName": "Mars.pdf",
-      "quote": "Martian surface is caused by ferric oxide, or rust",
-      "pageNumber": 3,
-      "indexOnPage": 0
-    }
-  ]
+  }
 }
 ```
 
 ### How response streaming works
 
-When using the `/api/ask-streaming` endpoint, answers will be streamed as with the typical response from OpenAI. The format of the response is as follows:
+When using the `/api/ask-streaming` endpoint, answers are streamed as [Server-Sent Events](https://developer.mozilla.org/docs/Web/API/Server-sent_events). Each event has a name matching the `streamState` value and a JSON `Response` payload in the `data` field. The format is as follows:
 
-```json
-[
-  {
-    "originalQuestion": "why is mars called the red planet?",
-    "reformulatedQuestion": "Why is the planet Mars known as the red planet?",
-    "answer": null,
-    "streamState": "Start",
-    "tokenUsage": {
-      "reformulation": {
-        "promptTokens": 541,
-        "completionTokens": 12,
-        "totalTokens": 553
-      },
-      "embeddingTokenCount": 11,
-      "question": null
-    },
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": "Mars",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " is",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " known",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " as",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " the",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " red",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " planet",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " because",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " its",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " surface",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " is",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " covered",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " in",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": " iron",
-    "streamState": "Append",
-    "tokenUsage": null,
-    "citations": null
-  },
-  /// ...  
-  {
-    "originalQuestion": null,
-    "reformulatedQuestion": null,
-    "answer": null,
-    "streamState": "End",
-    "tokenUsage": {
-      "reformulation": null,
-      "embeddingTokenCount": null,
-      "question": {
-        "promptTokens": 30949,
-        "completionTokens": 221,
-        "totalTokens": 31170
-      }
-    },
-    "citations": [
-      {
-        "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
-        "chunkId": "749aba1e-0db5-4033-cfa6-08ddb0115da3",
-        "fileName": "Mars.pdf",
-        "quote": "surface of Mars is orange-red",
-        "pageNumber": 1,
-        "indexOnPage": 0
-      },
-      {
-        "documentId": "b1870ad7-4685-42a3-576a-08ddb01159d5",
-        "chunkId": "215e7197-513f-4fbe-cfa8-08ddb0115da3",
-        "fileName": "Mars.pdf",
-        "quote": "red-orange appearance of the Martian surface is caused by ferric oxide, or rust",
-        "pageNumber": 3,
-        "indexOnPage": 0
-      }
-    ]
-  }
-]
+```text
+event: Start
+data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion":"why is mars called the red planet?","reformulatedQuestion":"Why is the planet Mars known as the red planet?","answer":null,"streamState":"Start","tokenUsage":{"reformulation":{"inputTokenCount":541,"outputTokenCount":12,"totalTokenCount":553,"cachedInputTokenCount":0,"reasoningTokenCount":0,"inputAudioTokenCount":null,"inputTextTokenCount":null,"outputAudioTokenCount":null,"outputTextTokenCount":null,"additionalCounts":null},"question":null}}
+
+event: Delta
+data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion":null,"reformulatedQuestion":null,"answer":"Mars","streamState":"Delta","tokenUsage":null}
+
+event: Delta
+data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion":null,"reformulatedQuestion":null,"answer":" is known as the red planet because its surface is rich in iron oxide dust.\n\n","streamState":"Delta","tokenUsage":null}
+
+event: Delta
+data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion":null,"reformulatedQuestion":null,"answer":"Sources\n1. **Mars.pdf**, page 1: *surface of Mars is orange-red because it is covered in iron oxide dust*","streamState":"Delta","tokenUsage":null}
+
+event: End
+data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion":null,"reformulatedQuestion":null,"answer":null,"streamState":"End","tokenUsage":{"reformulation":null,"question":{"inputTokenCount":30949,"outputTokenCount":221,"totalTokenCount":31170,"cachedInputTokenCount":3840,"reasoningTokenCount":0,"inputAudioTokenCount":null,"inputTextTokenCount":null,"outputAudioTokenCount":null,"outputTextTokenCount":null,"additionalCounts":null}}}
 ```
 
-- The first piece of the response has the following characteristics:
+- The first event has the following characteristics:
+  - The SSE event name is `Start`.
   - The *streamState* property is set to `Start`.
   - It contains the question and its reformulation (if not requested, *reformulatedQuestion* will be equal to *originalQuestion*).
-  - The *tokenUsage* section holds information about tokens used for reformulation (if done) and for the embedding of the question.
-- Then, there are as many elements for the actual answer as necessary:
-  - Each one contains a token.
-  - The *streamState* property is set to `Append`.
-  - *originalQuestion*, *reformulatedQuestion*, *tokenUsage* and *citations* are always `null`.
-- The stream ends when an element with *streamState* equals `End` is received. This element contains token usage information for the question and the whole answer, and the list of citations.
+  - The *tokenUsage* section holds information about tokens used for reformulation, if done.
+- Then, there are as many `Delta` events as necessary for the actual answer:
+  - Each event contains a token or chunk of generated text in the *answer* property.
+  - The *streamState* property is set to `Delta`.
+  - *originalQuestion*, *reformulatedQuestion* and *tokenUsage* are always `null`.
+- The stream ends when an `End` event is received. This event contains token usage information for the final answer.
+- Sources are included in the Markdown answer text.
 
 ## Limitations & FAQ
 

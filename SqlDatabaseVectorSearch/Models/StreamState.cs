@@ -3,6 +3,6 @@
 public enum StreamState
 {
     Start,
-    Append,
+    Delta,
     End
 }

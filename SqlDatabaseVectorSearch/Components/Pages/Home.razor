@@ -6,7 +6,7 @@
 <h1>SQL Database Vector Search</h1>
 
 <p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">
-    A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native VECTOR type in <img src="/images/sqldatabase.svg" style="height:1.5em;vertical-align:middle;" /> Azure SQL Database with <img src="/images/openai.svg" style="height:1.5em;vertical-align:middle;" /> Azure OpenAI.
+    A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native VECTOR type in <img src="/images/sqldatabase.svg" style="height:1.5em;vertical-align:middle;" /> Azure SQL Database with <img src="/images/openai.svg" style="height:1.5em;vertical-align:middle;" /> Azure OpenAI and <a href="https://github.com/microsoft/agent-framework" target="_blank">Microsoft Agent Framework</a>.
 </p>
 
 <p>
@@ -14,18 +14,20 @@
     <ul>
         <li>Load documents (PDF, DOCX, TXT, MD)</li>
         <li>Generate embeddings and save them as vectors in Azure SQL Database</li>
-        <li>Perform semantic search and RAG using Azure OpenAI</li>
+        <li>Perform semantic search and RAG using Azure OpenAI agents</li>
         <li>Interact via a Blazor Web App or programmatically via Minimal API</li>
     </ul>
-    Embeddings and chat completion are powered by <a href="https://github.com/microsoft/semantic-kernel" target="_blank">Semantic Kernel</a>. Vectors are managed with <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a>.
+    Document import, question reformulation, and RAG are orchestrated with <a href="https://github.com/microsoft/agent-framework" target="_blank">Microsoft Agent Framework</a>. Vectors are managed with <a href="https://github.com/efcore/EfCore.SqlServer.VectorSearch" target="_blank">EFCore.SqlServer.VectorSearch</a>.
 </p>
 
 <h3>Supported Features</h3>
 <ul>
-    <li><strong>Conversation History with Question Reformulation</strong>: View and reformulate your conversation history for better clarity and understanding.</li>
-    <li><strong>Information about Token Usage</strong>: Access detailed information about token usage for transparency and management.</li>
-    <li><strong>Response Streaming</strong>: Receive real-time streaming of responses for a seamless and efficient user experience.</li>
-    <li><strong>Citations</strong>: Get citations for the sources used to justify each answer, allowing you to verify and understand the origin of the content.</li>
+    <li><strong>Microsoft Agent Framework orchestration</strong>: Import documents through an embedding workflow and answer questions with dedicated reformulation and RAG agents.</li>
+    <li><strong>Conversation history with question reformulation</strong>: Rewrite follow-up questions with the current conversation context before vector search.</li>
+    <li><strong>SQL vector-search context</strong>: Retrieve relevant chunks from Azure SQL Database through native VECTOR search.</li>
+    <li><strong>Information about token usage</strong>: Access token usage for reformulation and final answer generation.</li>
+    <li><strong>Response streaming</strong>: Receive answer tokens in real time in the chat page and streaming API.</li>
+    <li><strong>Markdown source citations</strong>: Get citations directly in the answer text with source name, page number when available, and a short supporting excerpt.</li>
 </ul>
 
 <p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">

@@ -77,7 +77,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
             updates.Add(update);
             if (!string.IsNullOrEmpty(update.Text))
             {
-                yield return new(question.ConversationId, update.Text, StreamState.Append);
+                yield return new(question.ConversationId, update.Text, StreamState.Delta);
             }
         }
 

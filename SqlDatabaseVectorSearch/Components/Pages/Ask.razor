@@ -170,7 +170,7 @@
         messages.Add(assistantMessage);
 
         question = null;
-        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
 
         await EnsureMessageIsVisibleAsync();
 
@@ -180,27 +180,26 @@
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
             var response = vectorSearchService.AskStreamingAsync(userQuestion);
-            await foreach (var delta in response)
+            await foreach (var update in response)
             {
-                if (delta.StreamState == StreamState.Start)
+                if (update.StreamState == StreamState.Start)
                 {
-                    userMessage.Text = delta.ReformulatedQuestion;
-                    assistantMessage.TokenUsage = FormatTokenUsage(delta.TokenUsage);
+                    userMessage.Text = update.ReformulatedQuestion;
+                    assistantMessage.TokenUsage = FormatTokenUsage(update.TokenUsage);
                     assistantMessage.Status = MessageStatus.Streaming;
                 }
-                else if (delta.StreamState == StreamState.Append)
+                else if (update.StreamState == StreamState.Delta)
                 {
                     // Adds tokens to the assistant message as they are received.
-                    assistantMessage.Text += delta.Answer;
+                    assistantMessage.Text += update.Answer;
                 }
-                else if (delta.StreamState == StreamState.End)
+                else if (update.StreamState == StreamState.End)
                 {
                     assistantMessage.Status = MessageStatus.Completed;
-                    assistantMessage.TokenUsage += FormatTokenUsage(delta.TokenUsage);
+                    assistantMessage.TokenUsage += FormatTokenUsage(update.TokenUsage);
                 }
 
-                await Task.Yield();
-                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
 
                 await EnsureMessageIsVisibleAsync();
             }
@@ -234,13 +233,13 @@
 
         showCopyConfirmation = true;
         toolTipText = "Copied!";
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         await Task.Delay(3000); // Shows the checkmark for 3 seconds
 
         toolTipText = "Copy to Clipboard";
         showCopyConfirmation = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private static string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)
