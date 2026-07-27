@@ -173,15 +173,7 @@ var textSearchOptions = new TextSearchProviderOptions()
         sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
         sb.AppendLine();
 
-        sb.AppendLine("### Sources (copy/paste-ready)");
-        foreach (var (i, r) in results.Index())
-        {
-            sb.AppendLine($"- {GetSourceName(r, i)}");
-        }
-
-        sb.AppendLine();
-
-        sb.AppendLine("### Excerpts");
+        sb.AppendLine("### Sources");
         foreach (var (i, r) in results.Index())
         {
             sb.AppendLine($"[{i + 1}] {GetSourceName(r, i)}");
