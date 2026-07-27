@@ -23,7 +23,7 @@ public class DocumentEndpoints : IEndpointRouteHandlerBuilder
         documentsApiGroup.MapPost(string.Empty, async (IFormFile file, VectorSearchService vectorSearchService, CancellationToken cancellationToken,
             [Description("The unique identifier of the document. If not provided, a new one will be generated. If you specify an existing documentId, the corresponding document will be overwritten.")] Guid? documentId = null) =>
         {
-            var result = await vectorSearchService.ImportAsync(new FormFileEmbeddingRequest(file, documentId), cancellationToken);
+            var result = await vectorSearchService.ImportAsync(EmbeddingRequest.FromFormFile(file, documentId), cancellationToken);
             return TypedResults.Ok(result);
         })
         .DisableAntiforgery()

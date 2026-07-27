@@ -17,7 +17,7 @@ namespace SqlDatabaseVectorSearch.Services;
 public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")] Workflow workflow, [FromKeyedServices("ReformulationAgent")] AIAgent reformulationAgent, [FromKeyedServices("RagAgent")] AIAgent ragAgent,
     [FromKeyedServices("RagAgent")] AgentSessionStore sessionStore)
 {
-    public async Task<StoreEmbeddingResponse> ImportAsync(FormFileEmbeddingRequest request, CancellationToken cancellationToken = default)
+    public async Task<StoreEmbeddingResponse> ImportAsync(EmbeddingRequest request, CancellationToken cancellationToken = default)
     {
         await using var run = await InProcessExecution.RunAsync(workflow, request, cancellationToken: cancellationToken);
         var events = run.NewEvents.ToList();

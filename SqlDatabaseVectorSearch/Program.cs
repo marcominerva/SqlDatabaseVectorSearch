@@ -92,18 +92,15 @@ builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddScoped<ContextProvider>();
 
-builder.Services.AddSingleton<FormFileToEmbeddingRequestExecutor>();
 builder.Services.AddSingleton<GenerateEmbeddingExecutor>();
 builder.Services.AddScoped<StoreEmbeddingExecutor>();   // This executor is registered as scoped because it uses the DbContext, which is also scoped.
 
 builder.AddWorkflow("EmbeddingWorkflow", (services, key) =>
 {
-    var formfileToConversionRequestExecutor = services.GetRequiredService<FormFileToEmbeddingRequestExecutor>();
     var generateEmbeddingExecutor = services.GetRequiredService<GenerateEmbeddingExecutor>();
     var storeEmbeddingExecutor = services.GetRequiredService<StoreEmbeddingExecutor>();
 
-    var workflow = new WorkflowBuilder(formfileToConversionRequestExecutor).WithName(key)
-        .AddEdge(formfileToConversionRequestExecutor, generateEmbeddingExecutor)
+    var workflow = new WorkflowBuilder(generateEmbeddingExecutor).WithName(key)
         .AddEdge(generateEmbeddingExecutor, storeEmbeddingExecutor)
         .WithOutputFrom(storeEmbeddingExecutor)
         .Build(validateOrphans: true);
