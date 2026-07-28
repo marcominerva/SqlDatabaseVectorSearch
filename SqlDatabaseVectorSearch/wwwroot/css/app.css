@@ -7,43 +7,61 @@ body, html {
 :root {
     --bb-sidebar2-width: 270px;
     --bb-sidebar2-collapsed-width: 50px;
-    --bb-sidebar2-background-color: rgba(234, 234, 234, 1);
-    --bb-sidebar2-top-row-background-color: rgba(0,0,0,0.08);
-    --bb-sidebar2-top-row-border-color: rgb(194,192,192);
-    --bb-sidebar2-title-text-color: rgb(0,0,0);
+    --bb-sidebar2-background-color: transparent;
+    --bb-sidebar2-top-row-background-color: transparent;
+    --bb-sidebar2-top-row-border-color: rgba(13,110,253,0.12);
+    --bb-sidebar2-title-text-color: #1b2436;
     --bb-sidebar2-brand-icon-color: #0d6efd;
     --bb-sidebar2-brand-image-width: 24px;
     --bb-sidebar2-brand-image-height: 24px;
     --bb-sidebar2-title-badge-text-color: rgb(255,255,255);
     --bb-sidebar2-title-badge-background-color: rgba(25,135,84,var(--bs-bg-opacity,1));
-    --bb-sidebar2-navbar-toggler-icon-color: rgb(0,0,0);
-    --bb-sidebar2-navbar-toggler-background-color: rgba(0,0,0,0.08);
-    --bb-sidebar2-content-border-color: rgb(194,192,192);
-    --bb-sidebar2-nav-item-text-color: rgba(0,0,0,0.9);
-    --bb-sidebar2-nav-item-text-active-color-rgb: 0,0,0;
-    --bb-sidebar2-nav-item-text-hover-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.9);
-    --bb-sidebar2-nav-item-text-active-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.9);
-    --bb-sidebar2-nav-item-background-hover-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.08);
-    --bb-sidebar2-nav-item-group-background-color: rgba(var(--bb-sidebar-nav-item-text-active-color-rgb),0.08);
+    --bb-sidebar2-navbar-toggler-icon-color: #1b2436;
+    --bb-sidebar2-navbar-toggler-background-color: rgba(13,110,253,0.08);
+    --bb-sidebar2-content-border-color: rgba(13,110,253,0.12);
+    --bb-sidebar2-nav-item-text-color: #495867;
+    --bb-sidebar2-nav-item-text-active-color-rgb: 27,36,54;
+    --bb-sidebar2-nav-item-text-hover-color: #0d6efd;
+    --bb-sidebar2-nav-item-text-active-color: #0d6efd;
+    --bb-sidebar2-nav-item-background-hover-color: rgba(13,110,253,0.08);
+    --bb-sidebar2-nav-item-group-background-color: rgba(13,110,253,0.06);
 }
 
-.bb-sidebar2 nav .nav-item a:hover {
-    background-color: rgba(0,0,0,0.08) !important;
-    color: rgba(0,0,0,0.9) !important;
+/* A soft light gradient gives the sidebar a modern look while keeping the content area in focus. */
+.bb-sidebar2 {
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f8 100%);
+    border-right: 1px solid rgba(13,110,253,0.1);
+    box-shadow: 2px 0 12px rgba(27,36,54,0.06);
 }
 
-.bb-sidebar2 nav .nav-item a.active {
-    background-color: rgb(194,192,192) !important;
-    color: rgba(0,0,0,0.9) !important;
-}
+    .bb-sidebar2 nav .nav-item {
+        margin: 0.125rem 0.5rem;
+    }
 
-/* The nav item icons inherit the black link color, so they are colored individually. */
+        .bb-sidebar2 nav .nav-item a {
+            border-radius: 0.5rem;
+            transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+        }
+
+            .bb-sidebar2 nav .nav-item a:hover {
+                background-color: rgba(13,110,253,0.08) !important;
+                color: #0d6efd !important;
+            }
+
+            .bb-sidebar2 nav .nav-item a.active {
+                background: linear-gradient(90deg, rgba(13,110,253,0.16) 0%, rgba(13,110,253,0.04) 100%) !important;
+                color: #0d6efd !important;
+                font-weight: 600;
+                box-shadow: inset 3px 0 0 #0d6efd;
+            }
+
+/* The nav item icons inherit the link color, so they are colored individually. */
 .bb-sidebar2 nav .nav-item a .bi-house-door-fill {
     color: #0d6efd;
 }
 
 .bb-sidebar2 nav .nav-item a .bi-file-earmark-text-fill {
-    color: #0dcaf0;
+    color: #0aa2c0;
 }
 
 .bb-sidebar2 nav .nav-item a .bi-chat-dots-fill {
