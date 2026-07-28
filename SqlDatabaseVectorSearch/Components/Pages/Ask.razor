@@ -274,9 +274,9 @@
 
         static string FormatTokenUsageDetails(UsageDetails tokenUsage)
         {
-            // Reasoning tokens are part of the output tokens, so they're shown as a detail of that value.
-            var outputTokens = tokenUsage.ReasoningTokenCount is > 0 and var reasoningTokenCount
-                ? $"Output tokens: {tokenUsage.OutputTokenCount} (including {reasoningTokenCount} reasoning tokens)"
+            // Reasoning tokens are part of the output tokens, so they're shown as an indented detail of that value.
+            var outputTokens = tokenUsage.ReasoningTokenCount is > 0 
+                ? $"Output tokens: {tokenUsage.OutputTokenCount}<br /><span class=\"ms-3 small\">&bull; Reasoning: {tokenUsage.ReasoningTokenCount}</span>"
                 : $"Output tokens: {tokenUsage.OutputTokenCount}";
 
             return string.Join("<br />",
