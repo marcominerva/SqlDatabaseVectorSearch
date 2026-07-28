@@ -22,12 +22,13 @@
             <div class="col-md-5 col-sm-4 col-5">
                 <div class="input-group">
                     <span class="input-group-text">
-                        <Tooltip Title="PDF, DOCX, TXT and MD files are supported, up to 20 MB" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                        <Tooltip Title="@($"{UploadDocument.SupportedExtensionsDescription} files are supported, up to {UploadDocument.MaxFileSizeInMegaBytes} MB")" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
                             <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
                         </Tooltip>
                     </span>
-                    <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
+                    <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept="@UploadDocument.AcceptedFileTypes" id="fileInput" />
                 </div>
+                <ValidationMessage For="@(() => Model.File)" />
             </div>
             <div class="col-md-5 col-sm-5 col-5">
                 <div class="input-group">
@@ -188,14 +189,13 @@ else
 
         try
         {
-            await using var inputStream = Model.File.OpenReadStream(20 * 1024 * 1024); // 20 MB
+            await using var inputStream = Model.File.OpenReadStream(UploadDocument.MaxFileSize);
             await using var stream = await inputStream.GetMemoryStreamAsync();
 
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
-            var documentId = string.IsNullOrWhiteSpace(Model.DocumentId) ? null : (Guid?)Guid.Parse(Model.DocumentId);
-            await vectorSearchService.ImportAsync(EmbeddingRequest.Create(stream, fileName, documentId));
+            await vectorSearchService.ImportAsync(EmbeddingRequest.Create(stream, fileName, Model.GetDocumentId()));
 
             ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document '{fileName}' has been successfully uploaded and indexed."));
 
@@ -219,7 +219,7 @@ else
 
     private async Task DeleteSelectedDocuments()
     {
-        var selectedDocumentIds = documents?.Where(d => d.IsSelected).Select(d => d.Id) ?? [];
+        var selectedDocumentIds = documents.Where(d => d.IsSelected).Select(d => d.Id);
 
         var options = new ConfirmDialogOptions
         {
@@ -289,11 +289,46 @@ else
         public string LocalCreationDateString { get; set; } = string.Empty;
     }
 
-    public class UploadDocument
+    public class UploadDocument : IValidatableObject
     {
+        public const int MaxFileSizeInMegaBytes = 20;
+
+        public const long MaxFileSize = MaxFileSizeInMegaBytes * 1024 * 1024;
+
+        public static readonly string[] SupportedExtensions = [".pdf", ".docx", ".txt", ".md"];
+
+        public static string AcceptedFileTypes { get; } = string.Join(',', SupportedExtensions);
+
+        public static string SupportedExtensionsDescription { get; } = string.Join(", ", SupportedExtensions.Select(e => e.TrimStart('.').ToUpperInvariant()));
+
         public IBrowserFile? File { get; set; }
 
-        [RegularExpression(@"^(\{|\()?[0-9a-fA-F]{8}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{12}(\}|\))?$", ErrorMessage = "Invalid GUID format.")]
         public string? DocumentId { get; set; }
+
+        public Guid? GetDocumentId()
+            => Guid.TryParse(DocumentId, out var documentId) ? documentId : null;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!string.IsNullOrWhiteSpace(DocumentId) && !Guid.TryParse(DocumentId, out _))
+            {
+                yield return new ValidationResult("Invalid GUID format.", [nameof(DocumentId)]);
+            }
+
+            if (File is null)
+            {
+                yield break;
+            }
+
+            if (!SupportedExtensions.Contains(Path.GetExtension(File.Name), StringComparer.OrdinalIgnoreCase))
+            {
+                yield return new ValidationResult($"Only {SupportedExtensionsDescription} files are supported.", [nameof(File)]);
+            }
+
+            if (File.Size > MaxFileSize)
+            {
+                yield return new ValidationResult($"The file exceeds the maximum allowed size of {MaxFileSizeInMegaBytes} MB.", [nameof(File)]);
+            }
+        }
     }
 }
