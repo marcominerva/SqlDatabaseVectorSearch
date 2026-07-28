@@ -11,7 +11,8 @@
     <p class="lead mb-4">
         A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native
         <code>VECTOR</code> type in
-        <img src="/images/sqldatabase.svg" class="inline-logo" alt="Azure SQL Database" /> Azure SQL Database, with
+        <img src="/images/sqldatabase.svg" class="inline-logo" alt="Azure SQL Database" /> Azure SQL Database or
+        SQL Server 2025, with
         <img src="/images/openai.svg" class="inline-logo" alt="Azure OpenAI" /> Azure OpenAI and
         <a href="https://github.com/microsoft/agent-framework" target="_blank" rel="noopener">Microsoft Agent Framework</a>.
     </p>
@@ -49,8 +50,8 @@
                 <Icon Name="IconName.DatabaseFillCheck" Color="IconColor.Success" Size="IconSize.x3" />
                 <h3 class="h6 mt-3 mb-2">2. Store</h3>
                 <p class="text-body-secondary mb-0 small">
-                    Embeddings are persisted in Azure SQL Database using the native <code>VECTOR</code> type, so no
-                    external vector store is required.
+                    Embeddings are persisted in Azure SQL Database or SQL Server 2025 using the native
+                    <code>VECTOR</code> type, so no external vector store is required.
                 </p>
             </div>
         </div>
@@ -87,8 +88,8 @@
     </li>
     <li class="list-group-item">
         <Icon Name="IconName.DatabaseFillCheck" Color="IconColor.Success" Class="me-2" />
-        <strong>SQL vector search</strong>: the most relevant chunks are retrieved from Azure SQL Database through
-        native <code>VECTOR</code> cosine-distance search.
+        <strong>SQL vector search</strong>: the most relevant chunks are retrieved from Azure SQL Database or
+        SQL Server 2025 through native <code>VECTOR</code> cosine-distance search.
     </li>
     <li class="list-group-item">
         <Icon Name="IconName.CashCoin" Color="IconColor.Warning" Class="me-2" />

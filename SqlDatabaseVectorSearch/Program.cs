@@ -152,6 +152,8 @@ builder.Services.AddAIAgent("ReformulationAgent", (services, key) =>
         },
         ChatHistoryProvider = new InMemoryChatHistoryProvider(new()
         {
+            // The reformulation agent reads the conversation only to get the context it needs, but its own questions and answers
+            // must not pollute the session: the history is kept clean for the RAG agent, so nothing is stored back.
             StorageInputRequestMessageFilter = _ => [],
             StorageInputResponseMessageFilter = _ => []
         })

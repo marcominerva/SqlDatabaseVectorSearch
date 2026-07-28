@@ -4,7 +4,7 @@
 [![Minimal API](https://img.shields.io/badge/Minimal%20API-Available-green)](https://dotnet.microsoft.com/apps/aspnet/apis)
 [![Blazor](https://img.shields.io/badge/Blazor-WebApp-purple)](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)
 
-A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generation) and vector search using the native VECTOR type in Azure SQL Database, Azure OpenAI, and [Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
+A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generation) and vector search using the native VECTOR type in Azure SQL Database or SQL Server 2025, Azure OpenAI, and [Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
 
 ## Table of Contents
 - [Overview](#overview)
@@ -23,9 +23,11 @@ A Blazor Web App and Minimal API for performing RAG (Retrieval Augmented Generat
 ## Overview
 This application allows you to:
 - Load documents (PDF, DOCX, TXT, MD)
-- Generate embeddings and save them as vectors in Azure SQL Database
+- Generate embeddings and save them as vectors in Azure SQL Database or SQL Server 2025
 - Perform semantic search and RAG using Azure OpenAI and Microsoft Agent Framework agents
 - Interact via a Blazor Web App or programmatically via Minimal API
+
+The native `VECTOR` type is available in both Azure SQL Database and SQL Server 2025, so no external vector store is required.
 
 Embeddings and chat completion are orchestrated with [Microsoft Agent Framework](https://github.com/microsoft/agent-framework). The application uses an embedding workflow to import documents, a reformulation agent to rewrite follow-up questions with conversation context, and a RAG agent connected to a SQL vector-search context provider.
 
@@ -39,18 +41,24 @@ Embeddings and chat completion are orchestrated with [Microsoft Agent Framework]
 
 ## Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
-- [Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart)
+- One of the following, both of which support the native `VECTOR` type:
+  - [Azure SQL Database](https://learn.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart)
+  - [SQL Server 2025](https://learn.microsoft.com/en-us/sql/relational-databases/vectors/vectors-sql-server) or later
 - Azure OpenAI resource and API keys
 
 ## Project Structure
 - `SqlDatabaseVectorSearch/` - Main Blazor Web App and API
   - `Components/` - Blazor UI components
+  - `ContentDecoders/` - Decoders that extract text from PDF, DOCX, TXT and MD files
   - `Data/` - EF Core context, migrations, and entities
   - `Endpoints/` - Minimal API endpoints
+  - `Extensions/` - Extension methods and helpers
+  - `Models/` - Request and response models
   - `Services/` - Business logic and integration services
-  - `TextChunkers/` - Text splitting utilities
-  - `Workflows/` - Microsoft Agent Framework workflow executors for document import and embedding generation
   - `Settings/` - Configuration classes
+  - `TextChunkers/` - Text splitting utilities
+  - `Validations/` - Request validators
+  - `Workflows/` - Microsoft Agent Framework workflow executors for document import and embedding generation
 
 ## Setup
 
@@ -61,8 +69,8 @@ Embeddings and chat completion are orchestrated with [Microsoft Agent Framework]
     ```
 
 2. Configure the database and OpenAI settings
-   - Edit `SqlDatabaseVectorSearch/appsettings.json` and set your Azure SQL connection string and OpenAI settings.
-   - **Important**: The `ModelId` values for both `ChatCompletion` and `Embedding` are used for token counting via `Microsoft.ML.Tokenizers`. These values must be valid model identifiers supported by the tokenizer library (e.g., `gpt-4o`, `gpt-4`, `gpt-3.5-turbo`, `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`). The `ModelId` may differ from the actual deployment name you're using in Azure OpenAI. For example, for gpt-4.1 and gpt-5 models set the `ModelId` to `gpt-4o` for proper token counting.
+   - Edit `SqlDatabaseVectorSearch/appsettings.json` and set your connection string (Azure SQL Database or SQL Server 2025) and OpenAI settings.
+   - **Important**: The `ModelId` values for both `ChatCompletion` and `Embedding` are used only for token counting via `Microsoft.ML.Tokenizers`, while the actual calls to the service use the `Deployment` values. `ModelId` must therefore be a model name recognized by the tokenizer library (e.g., `gpt-5`, `gpt-4.1`, `gpt-4o`, `gpt-4`, `gpt-3.5-turbo`, `text-embedding-3-small`, `text-embedding-3-large`, `text-embedding-ada-002`), which is typically different from the deployment name you have chosen in Azure OpenAI. If a model is not recognized, `TiktokenTokenizer.CreateForModel` throws at startup: in that case, fall back to the closest supported model that shares the same encoding (for example `gpt-4o` for newer GPT models).
    - If using embedding models with shortening (e.g., `text-embedding-3-small` or `text-embedding-3-large`), set the `Dimensions` property accordingly. For `text-embedding-3-large`, you must specify a value <= 1998.
    - If you change the VECTOR size, update both the [ApplicationDbContext](SqlDatabaseVectorSearch/Data/ApplicationDbContext.cs) and the [Initial Migration](SqlDatabaseVectorSearch/Data/Migrations/00000000000000_Initial.cs).
 
@@ -72,16 +80,16 @@ Embeddings and chat completion are orchestrated with [Microsoft Agent Framework]
     dotnet run --project SqlDatabaseVectorSearch/SqlDatabaseVectorSearch.csproj
     ```
 
-5. Access the Web App
-   - Navigate to `https://localhost:5001` (or the port shown in the console)
+4. Access the Web App
+   - Navigate to `https://localhost:7025` (or the port shown in the console)
 
 ## Supported features
 
 - **Microsoft Agent Framework orchestration**: Document import is implemented as a workflow, while question reformulation and RAG are implemented as agents.
 - **Conversation history with question reformulation**: The reformulation agent rewrites each question using the conversation context before vector search is performed.
-- **SQL vector-search context provider**: The RAG agent receives relevant chunks from Azure SQL Database through a `TextSearchProvider` backed by native VECTOR search.
+- **SQL vector-search context provider**: The RAG agent receives relevant chunks from Azure SQL Database or SQL Server 2025 through a `TextSearchProvider` backed by native VECTOR search.
 - **Information about token usage**: The Blazor chat page and API responses expose token usage for reformulation and final answer generation.
-- **Response streaming**: The Blazor chat page uses streaming responses, appending answer tokens as they arrive.
+- **Response streaming**: The Blazor chat page and the `/api/ask-streaming` endpoint stream answers, appending tokens as they arrive.
 - **Markdown source citations**: Citations are included directly in the generated Markdown answer as a localized sources section with source name, page number when available, and a short supporting excerpt.
 
 ## How to Use
@@ -92,7 +100,7 @@ Embeddings and chat completion are orchestrated with [Microsoft Agent Framework]
 ### How it works
 
 1. Documents are uploaded through the API and processed by the `EmbeddingWorkflow`.
-2. The workflow converts the uploaded file into text, chunks it, generates embeddings, and stores documents, chunks, and VECTOR embeddings in Azure SQL Database.
+2. The workflow converts the uploaded file into text, chunks it, generates embeddings, and stores documents, chunks, and VECTOR embeddings in Azure SQL Database or SQL Server 2025.
 3. When a question is asked, the `ReformulationAgent` can rewrite it using the current conversation context.
 4. The `RagAgent` receives relevant SQL vector-search results through a `TextSearchProvider` and answers using only the provided context.
 5. Sources are not returned as a separate JSON collection. They are formatted directly in the Markdown answer.
@@ -103,7 +111,7 @@ POST /api/ask
 Content-Type: application/json
 
 {
-    "conversationId": "3d0bd178-499d-433a-b2bc-c35e488d9e2c"
+    "conversationId": "3d0bd178-499d-433a-b2bc-c35e488d9e2c",
     "text": "Why is Mars called the red planet?"
 }
 ```
@@ -167,6 +175,7 @@ data: {"conversationId":"3d0bd178-499d-433a-b2bc-c35e488d9e2c","originalQuestion
 
 ## Limitations & FAQ
 
+- **Database**: Azure SQL Database or SQL Server 2025 (or later). Both provide the native `VECTOR` type used by this sample.
 - **VECTOR column size**: Maximum allowed is 1998. For `text-embedding-3-large`, set `Dimensions` <= 1998.
 - **Supported file types**: PDF, DOCX, TXT, MD.
 - **Known Issues**: See [Issues](https://github.com/marcominerva/SqlDatabaseVectorSearch/issues)

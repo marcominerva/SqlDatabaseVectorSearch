@@ -19,7 +19,7 @@ public partial class GenerateEmbeddingExecutor(IServiceProvider serviceProvider,
         var chunks = await decoder.DecodeAsync(request.Content, request.ContentType, cancellationToken);
         var chunkContents = chunks.Select(p => p.Content).ToList();
 
-        // We get the token count of the whole document because it is the total number of token used by embedding (it may be necessary, for example, for cost analysis).
+        // We get the token count of the whole document because it is the total number of tokens used by the embedding (it may be necessary, for example, for cost analysis).
         var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", chunkContents));
 
         // Process paragraphs in batches.
