@@ -77,10 +77,10 @@
                                                     <Icon Class="d-flex" Name="IconName.CashCoin"></Icon>
                                                 </Tooltip>
                                             </div>
-                                            <div class="text-end bg-transparent">
-                                                <Tooltip Title="@toolTipText" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
-                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message.Text))">
-                                                        @if (showCopyConfirmation)
+                                            <div class="text-end bg-transparent copy-button">
+                                                <Tooltip Title="@(copiedMessage == message ? "Copied!" : "Copy to clipboard")" Color="TooltipColor.Dark" Placement="TooltipPlacement.Bottom">
+                                                    <Button Type="ButtonType.Button" Outline="false" @onclick="@(async () => await CopyToClipboardAsync(message))">
+                                                        @if (copiedMessage == message)
                                                         {
                                                             <Icon Name="IconName.Check" Class="text-success" />
                                                         }
@@ -113,11 +113,11 @@
             </span>
             <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask a question about your documents..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />
             <div class="input-group-text bg-transparent border-0">
-                <Button Type="ButtonType.Submit" @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
+                <Button Type="ButtonType.Submit" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
                     <Icon Name="IconName.Send" />
                 </Button>
                 <Tooltip Title="Start a new conversation" Color="TooltipColor.Secondary" Placement="TooltipPlacement.Bottom">
-                    <Button Type="ButtonType.Reset" @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
+                    <Button Type="ButtonType.Reset" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
                         <Icon CustomIconName="bi bi-x-lg" />
                     </Button>
                 </Tooltip>
@@ -128,8 +128,6 @@
 
 @code
 {
-    private Button askButton = default!;
-    private Button resetButton = default!;
     private ElementReference askInput = default!;
     private ElementReference chat = default!;
 
@@ -137,10 +135,9 @@
     private string? question;
 
     private Guid conversationId = Guid.NewGuid();
-    private bool isAsking = false;
+    private bool isAsking;
 
-    private bool showCopyConfirmation = false;
-    private string toolTipText = "Copy to clipboard";
+    private Message? copiedMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -222,9 +219,10 @@
         }
         finally
         {
-            await EnsureMessageIsVisibleAsync();
-
             isAsking = false;
+            await InvokeAsync(StateHasChanged);
+
+            await EnsureMessageIsVisibleAsync();
         }
     }
 
@@ -232,25 +230,29 @@
     {
         question = null;
         conversationId = Guid.NewGuid();
+        copiedMessage = null;
         messages.Clear();
     }
 
-    private async Task CopyToClipboardAsync(string text)
+    private async Task CopyToClipboardAsync(Message message)
     {
-        if (text is null)
+        if (string.IsNullOrEmpty(message.Text))
+        {
             return;
+        }
 
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", message.Text);
 
-        showCopyConfirmation = true;
-        toolTipText = "Copied!";
+        copiedMessage = message;
         await InvokeAsync(StateHasChanged);
 
         await Task.Delay(3000); // Shows the checkmark for 3 seconds
 
-        toolTipText = "Copy to clipboard";
-        showCopyConfirmation = false;
-        await InvokeAsync(StateHasChanged);
+        if (copiedMessage == message)
+        {
+            copiedMessage = null;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private static string FormatTokenUsage(TokenUsageResponse? tokenUsageResponse)

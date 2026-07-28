@@ -119,6 +119,29 @@ input[type="checkbox"] + label {
     z-index: 10;
 }
 
+/* The copy button only shows an icon, so the default button chrome is removed and just the pointer cursor is kept. */
+.copy-button ::deep .btn {
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--bs-secondary-color);
+}
+
+    .copy-button ::deep .btn:hover {
+        background-color: transparent;
+        border-color: transparent;
+        color: var(--bs-body-color);
+    }
+
+    .copy-button ::deep .btn:focus,
+    .copy-button ::deep .btn:focus-visible,
+    .copy-button ::deep .btn:active {
+        background-color: transparent;
+        border-color: transparent;
+        box-shadow: none;
+        outline: none;
+    }
+
 .btn-clipboard {
     line-height: 1;
     color: var(--bs-body-color);
