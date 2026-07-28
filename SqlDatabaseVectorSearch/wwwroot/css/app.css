@@ -11,7 +11,7 @@ body, html {
     --bb-sidebar2-top-row-background-color: rgba(0,0,0,0.08);
     --bb-sidebar2-top-row-border-color: rgb(194,192,192);
     --bb-sidebar2-title-text-color: rgb(0,0,0);
-    --bb-sidebar2-brand-icon-color: rgb(0,0,0);
+    --bb-sidebar2-brand-icon-color: #0d6efd;
     --bb-sidebar2-brand-image-width: 24px;
     --bb-sidebar2-brand-image-height: 24px;
     --bb-sidebar2-title-badge-text-color: rgb(255,255,255);
@@ -35,6 +35,19 @@ body, html {
 .bb-sidebar2 nav .nav-item a.active {
     background-color: rgb(194,192,192) !important;
     color: rgba(0,0,0,0.9) !important;
+}
+
+/* The nav item icons inherit the black link color, so they are colored individually. */
+.bb-sidebar2 nav .nav-item a .bi-house-door-fill {
+    color: #0d6efd;
+}
+
+.bb-sidebar2 nav .nav-item a .bi-file-earmark-text-fill {
+    color: #0dcaf0;
+}
+
+.bb-sidebar2 nav .nav-item a .bi-chat-dots-fill {
+    color: #198754;
 }
 
 h1:focus {

@@ -65,7 +65,7 @@
                                         <div class="d-flex justify-content-between">
                                             <div class="text-start bg-transparent mt-3">
                                                 <Tooltip Title="@message.TokenUsage" IsHtml="true" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                                                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                                                    <Icon Class="d-flex" Name="IconName.CashCoin"></Icon>
                                                 </Tooltip>
                                             </div>
                                             <div class="text-end bg-transparent">
@@ -99,7 +99,7 @@
         <div class="input-group">
             <span class="input-group-text bg-transparent border-0">
                 <Tooltip Title="Messages aren't stored in any way on either the client or the server." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                    <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                    <Icon Class="d-flex" Color="IconColor.Success" Name="IconName.ShieldLockFill"></Icon>
                 </Tooltip>
             </span>
             <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />

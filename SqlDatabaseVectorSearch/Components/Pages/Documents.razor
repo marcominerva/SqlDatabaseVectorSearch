@@ -9,7 +9,7 @@
 <PageTitle>Documents</PageTitle>
 
 <h4 class="mb-4">
-    <Icon Name="IconName.Upload" class="me-2" />
+    <Icon Name="IconName.CloudArrowUpFill" Color="IconColor.Primary" class="me-2" />
     Upload new document
 </h4>
 
@@ -21,7 +21,7 @@
             <div class="input-group">
                 <span class="input-group-text">
                     <Tooltip Title="PDF, DOCX, TXT and MD files are supported" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
+                        <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
                     </Tooltip>
                 </span>
                 <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
@@ -31,7 +31,7 @@
             <div class="input-group">
                 <span class="input-group-text">
                     <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex text-body-secondary me-2" Name="IconName.InfoCircle"></Icon>
+                        <Icon Class="d-flex me-2" Color="IconColor.Warning" Name="IconName.KeyFill"></Icon>
                     </Tooltip>
                     Document ID
                 </span>
@@ -56,7 +56,7 @@
 else
 {
     <h4 class="mt-4 mb-4">
-        <Icon Name="IconName.Files" class="me-2" />
+        <Icon Name="IconName.FileEarmarkTextFill" Color="IconColor.Info" class="me-2" />
         Available documents
     </h4>
 
