@@ -17,35 +17,37 @@
 <EditForm Model="Model" Enhance OnValidSubmit="UploadFile">
     <DataAnnotationsValidator />
 
-    <div class="row">
-        <div class="col-md-5 col-sm-4 col-5">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <Tooltip Title="PDF, DOCX, TXT and MD files are supported, up to 20 MB" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
-                    </Tooltip>
-                </span>
-                <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
+    <fieldset disabled="@isUploading">
+        <div class="row">
+            <div class="col-md-5 col-sm-4 col-5">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <Tooltip Title="PDF, DOCX, TXT and MD files are supported, up to 20 MB" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                            <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
+                        </Tooltip>
+                    </span>
+                    <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
+                </div>
+            </div>
+            <div class="col-md-5 col-sm-5 col-5">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                            <Icon Class="d-flex me-2" Color="IconColor.Warning" Name="IconName.KeyFill"></Icon>
+                        </Tooltip>
+                        Document ID
+                    </span>
+                    <TextInput Placeholder="Enter a valid GUID or leave empty for auto-generation" @bind-Value="@Model.DocumentId" />
+                </div>
+                <ValidationMessage For="@(() => Model.DocumentId)" />
+            </div>
+            <div class="col-md-2 col-sm-3 col-2">
+                <div class="d-grid gap-2">
+                    <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)" Class="w-100 py-2 fw-semibold shadow-sm"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
+                </div>
             </div>
         </div>
-        <div class="col-md-5 col-sm-5 col-5">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex me-2" Color="IconColor.Warning" Name="IconName.KeyFill"></Icon>
-                    </Tooltip>
-                    Document ID
-                </span>
-                <TextInput Placeholder="Enter a valid GUID or leave empty for auto-generation" @bind-Value="@Model.DocumentId" />
-            </div>
-            <ValidationMessage For="@(() => Model.DocumentId)" />
-        </div>
-        <div class="col-md-2 col-sm-3 col-2">
-            <div class="d-grid gap-2">
-                <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)" Class="w-100 py-2 fw-semibold shadow-sm"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
-            </div>
-        </div>
-    </div>
+    </fieldset>
 </EditForm>
 
 @if (isLoading && documents.Count == 0)
@@ -125,6 +127,7 @@ else
     private Button deleteButton = default!;
 
     private bool isLoading = true;
+    private bool isUploading;
     private IList<SelectableDocument> documents = [];
 
     private UploadDocument Model { get; set; } = new();
@@ -178,6 +181,9 @@ else
 
         uploadButton.ShowLoading();
 
+        isUploading = true;
+        await InvokeAsync(StateHasChanged);
+
         var fileName = Model.File.Name;
 
         try
@@ -205,6 +211,9 @@ else
         finally
         {
             uploadButton.HideLoading();
+
+            isUploading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 

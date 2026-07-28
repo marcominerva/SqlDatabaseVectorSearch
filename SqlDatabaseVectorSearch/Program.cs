@@ -174,7 +174,7 @@ var textSearchOptions = new TextSearchProviderOptions()
         sb.AppendLine("- Do NOT add inline citations.");
         sb.AppendLine("- At the END of your answer, add a sources section that follows this template exactly, where the sources label and the page label are localized in the same language as the user's question:");
         sb.AppendLine("  *localized-sources-label*");
-        sb.AppendLine("  1. **SourceName**, localized-page-label PageNumber: *supporting excerpt of about 15-20 words*");
+        sb.AppendLine("  1. **SourceName**, localized-page-label PageNumber: *supporting excerpt of about 20-30 words*");
         sb.AppendLine("- Omit the page label and the page number when the page number is not available.");
         sb.AppendLine("- Do NOT use headings or links in the sources section.");
         sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
