@@ -45,35 +45,38 @@ input[type="checkbox"] + label {
 
 .progress-chat {
     width: 200px;
-    height: 4px;
+    height: 6px;
 }
 
 .progress-bar-chat {
-    height: 4px;
-    background-color: rgba(5, 114, 206, 0.2);
+    height: 6px;
+    background-color: rgba(5, 114, 206, 0.15);
     width: 100%;
     overflow: hidden;
+    border-radius: 999px;
 }
 
 .progress-bar-indeterminate {
-    width: 100%;
+    width: 40%;
     height: 100%;
-    background-color: rgb(5, 114, 206);
-    animation: indeterminate-animation 1s infinite linear;
-    transform-origin: 0% 50%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(5, 114, 206, 0) 0%, rgb(5, 114, 206) 50%, rgba(5, 114, 206, 0) 100%);
+    animation: indeterminate-animation 1.4s infinite cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 @keyframes indeterminate-animation {
     0% {
-        transform: translateX(0) scaleX(0);
-    }
-
-    40% {
-        transform: translateX(0) scaleX(0.4);
+        transform: translateX(-100%);
     }
 
     100% {
-        transform: translateX(100%) scaleX(0.5);
+        transform: translateX(350%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .progress-bar-indeterminate {
+        animation-duration: 3s;
     }
 }
 
