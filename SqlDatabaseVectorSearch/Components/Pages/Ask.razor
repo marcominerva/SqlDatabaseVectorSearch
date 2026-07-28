@@ -262,26 +262,29 @@
             return string.Empty;
         }
 
-        var reformulation = tokenUsageResponse.Reformulation is not null
-            ? $"<p><strong>Reformulation:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Reformulation)}</p>"
-            : string.Empty;
+        (string Label, UsageDetails? Usage)[] sections =
+        [
+            ("Reformulation", tokenUsageResponse.Reformulation),
+            ("Question", tokenUsageResponse.Question)
+        ];
 
-        var question = tokenUsageResponse.Question is not null
-            ? $"<p><strong>Question:</strong><br />{FormatTokenUsageDetails(tokenUsageResponse.Question)}</p>"
-            : string.Empty;
+        return string.Concat(sections
+            .Where(section => section.Usage is not null)
+            .Select(section => $"<p><strong>{section.Label}:</strong><br />{FormatTokenUsageDetails(section.Usage!)}</p>"));
 
-        return $"{reformulation}{question}";
-
-        static string FormatTokenUsageDetails(UsageDetails? tokenUsage)
+        static string FormatTokenUsageDetails(UsageDetails tokenUsage)
         {
-            if (tokenUsage is null)
-            {
-                return string.Empty;
-            }
+            // Reasoning tokens are part of the output tokens, so they're shown as a detail of that value.
+            var outputTokens = tokenUsage.ReasoningTokenCount is > 0 and var reasoningTokenCount
+                ? $"Output tokens: {tokenUsage.OutputTokenCount} (including {reasoningTokenCount} reasoning tokens)"
+                : $"Output tokens: {tokenUsage.OutputTokenCount}";
 
-            return $"Input tokens: {tokenUsage.InputTokenCount}<br />" +
-                   $"Output tokens: {tokenUsage.OutputTokenCount}<br />" +
-                   $"Total tokens: {tokenUsage.TotalTokenCount}";
+            return string.Join("<br />",
+            [
+                $"Input tokens: {tokenUsage.InputTokenCount}",
+                outputTokens,
+                $"Total tokens: {tokenUsage.TotalTokenCount}"
+            ]);
         }
     }
 
