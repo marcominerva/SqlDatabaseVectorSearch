@@ -43,8 +43,22 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddSqlServer<ApplicationDbContext>(builder.Configuration.GetConnectionString("SqlConnection"), optionsAction: options =>
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
+    var connectionString = builder.Configuration.GetConnectionString("SqlConnection")!;
+
+    if (connectionString.Contains("database.windows.net"))
+    {
+        options.UseAzureSql(connectionString);
+    }
+    else
+    {
+        options.UseSqlServer(connectionString, sqlOptions =>
+        {
+            sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null);
+        });
+    }
+
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
