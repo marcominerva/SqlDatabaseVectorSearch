@@ -8,10 +8,11 @@
 
 <PageTitle>Documents</PageTitle>
 
-<h4 class="mb-4">
+<h4 class="mb-1">
     <Icon Name="IconName.CloudArrowUpFill" Color="IconColor.Primary" class="me-2" />
-    Upload new document
+    Upload a new document
 </h4>
+<p class="text-body-secondary small mb-4">The document is split into chunks, and an embedding is generated and stored for each chunk.</p>
 
 <EditForm Model="Model" Enhance OnValidSubmit="UploadFile">
     <DataAnnotationsValidator />
@@ -20,7 +21,7 @@
         <div class="col-md-5 col-sm-4 col-5">
             <div class="input-group">
                 <span class="input-group-text">
-                    <Tooltip Title="PDF, DOCX, TXT and MD files are supported" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                    <Tooltip Title="PDF, DOCX, TXT and MD files are supported, up to 20 MB" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
                         <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
                     </Tooltip>
                 </span>
@@ -58,53 +59,64 @@ else
     <h4 class="mt-4 mb-4">
         <Icon Name="IconName.FileEarmarkTextFill" Color="IconColor.Info" class="me-2" />
         Available documents
+        <span class="badge bg-secondary-subtle text-secondary-emphasis ms-2 align-middle">@documents.Count</span>
     </h4>
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 border rounded overflow-hidden">
-            <thead class="table-light sticky-top">
-                <tr>
-                    <th style="width:40px;"></th>
-                    <th class="text-secondary">ID</th>
-                    <th class="text-secondary">Name</th>
-                    <th class="text-secondary">Content type</th>
-                    <th class="text-secondary text-center">Chunks</th>
-                    <th class="text-secondary">Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var document in documents)
-                {
-                    <tr class="@((document.IsSelected ? "table-primary" : null))">
-                        <td>
-                            <div class="d-flex justify-content-center align-items-center">
-                                <CheckboxInput @bind-Value="document.IsSelected" />
-                            </div>
-                        </td>
-                        <td class="text-break small">@document.Id</td>
-                        <td class="fw-medium">@document.Name</td>
-                        <td>
-                            <span class="badge content-type-badge px-2 py-1 rounded-pill small">
-                                @document.ContentType
-                            </span>
-                        </td>
-                        <td class="text-center">@document.ChunkCount</td>
-                        <td class="small text-secondary">@document.LocalCreationDateString</td>
+    @if (documents.Count == 0)
+    {
+        <div class="text-center border rounded py-5 text-body-secondary">
+            <Icon Name="IconName.Inbox" Color="IconColor.Secondary" Size="IconSize.x3" />
+            <p class="mt-3 mb-0">No documents have been indexed yet. Upload one to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 border rounded overflow-hidden">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width:40px;"></th>
+                        <th class="text-secondary">ID</th>
+                        <th class="text-secondary">Name</th>
+                        <th class="text-secondary">Content type</th>
+                        <th class="text-secondary text-center">Chunks</th>
+                        <th class="text-secondary">Created</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="my-4"></div>
-    <div class="row">
-        <div class="col-md-2 col-sm-3 col-2">
-            <div class="d-grid gap-2">
-                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments" Class="w-100 py-2 fw-semibold shadow-sm">
-                    <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
-                </Button>
+                </thead>
+                <tbody>
+                    @foreach (var document in documents)
+                    {
+                        <tr class="@((document.IsSelected ? "table-primary" : null))">
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <CheckboxInput @bind-Value="document.IsSelected" />
+                                </div>
+                            </td>
+                            <td class="text-break small">@document.Id</td>
+                            <td class="fw-medium">@document.Name</td>
+                            <td>
+                                <span class="badge content-type-badge px-2 py-1 rounded-pill small">
+                                    @document.ContentType
+                                </span>
+                            </td>
+                            <td class="text-center">@document.ChunkCount</td>
+                            <td class="small text-secondary">@document.LocalCreationDateString</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="my-4"></div>
+        <div class="row">
+            <div class="col-md-2 col-sm-3 col-2">
+                <div class="d-grid gap-2">
+                    <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments" Class="w-100 py-2 fw-semibold shadow-sm">
+                        <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
+                    </Button>
+                </div>
             </div>
         </div>
-    </div>
+    }
 }
 
 @code {
@@ -179,7 +191,7 @@ else
             var documentId = string.IsNullOrWhiteSpace(Model.DocumentId) ? null : (Guid?)Guid.Parse(Model.DocumentId);
             await vectorSearchService.ImportAsync(EmbeddingRequest.Create(stream, fileName, documentId));
 
-            ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document {fileName} has been successfully uploaded and indexed."));
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document '{fileName}' has been successfully uploaded and indexed."));
 
             Model = new UploadDocument();
             await JSRuntime.InvokeVoidAsync("resetFileInput", "fileInput");
@@ -188,7 +200,7 @@ else
         }
         catch (Exception ex)
         {
-            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document {fileName}: {ex.Message}"));
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document '{fileName}': {ex.Message}"));
         }
         finally
         {

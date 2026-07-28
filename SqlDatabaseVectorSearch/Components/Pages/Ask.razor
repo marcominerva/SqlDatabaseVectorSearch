@@ -9,6 +9,15 @@
 <div class="card mx-auto mt-2">
     <div class="card-body">
 
+        @if (messages.Count == 0)
+        {
+            <div class="h-100 d-flex flex-column justify-content-center align-items-center text-body-secondary">
+                <Icon Name="IconName.ChatSquareQuoteFill" Color="IconColor.Primary" Size="IconSize.x4" />
+                <p class="mt-3 mb-1 fw-semibold">Chat with your documents</p>
+                <p class="small mb-0">Ask a question about the documents you have uploaded. Press the up arrow key to recall your previous question.</p>
+            </div>
+        }
+
         @foreach (var message in messages)
         {
             if (message.Role == "user")
@@ -98,18 +107,20 @@
     <div class="card-footer bg-white w-100 bottom-0 m-0 p-1">
         <div class="input-group">
             <span class="input-group-text bg-transparent border-0">
-                <Tooltip Title="Messages aren't stored in any way on either the client or the server." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                <Tooltip Title="Messages aren't stored in any way, either on the client or on the server." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
                     <Icon Class="d-flex" Color="IconColor.Success" Name="IconName.ShieldLockFill"></Icon>
                 </Tooltip>
             </span>
-            <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask me anything..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />
+            <input @ref="askInput" type="text" @bind="@question" @bind:event="oninput" placeholder="Ask a question about your documents..." class="form-control border-0" maxlength="2000" @onkeydown="HandleKeyDown" />
             <div class="input-group-text bg-transparent border-0">
                 <Button Type="ButtonType.Submit" @ref="askButton" Color="ButtonColor.Primary" Disabled="@(isAsking || string.IsNullOrWhiteSpace(question))" @onclick="AskQuestion">
                     <Icon Name="IconName.Send" />
                 </Button>
-                <Button Type="ButtonType.Reset" @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
-                    <Icon CustomIconName="bi bi-x-lg" />
-                </Button>
+                <Tooltip Title="Start a new conversation" Color="TooltipColor.Secondary" Placement="TooltipPlacement.Bottom">
+                    <Button Type="ButtonType.Reset" @ref="resetButton" Class="ms-2" Color="ButtonColor.Secondary" Disabled="@isAsking" @onclick="Reset">
+                        <Icon CustomIconName="bi bi-x-lg" />
+                    </Button>
+                </Tooltip>
             </div>
         </div>
     </div>
@@ -129,7 +140,7 @@
     private bool isAsking = false;
 
     private bool showCopyConfirmation = false;
-    private string toolTipText = "Copy to Clipboard";
+    private string toolTipText = "Copy to clipboard";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -206,7 +217,7 @@
         }
         catch (Exception ex)
         {
-            assistantMessage.Text = $"There was an error while processing the question: {ex.Message}";
+            assistantMessage.Text = $"There was an error while processing your question: {ex.Message}";
             assistantMessage.Status = MessageStatus.Completed;
         }
         finally
@@ -237,7 +248,7 @@
 
         await Task.Delay(3000); // Shows the checkmark for 3 seconds
 
-        toolTipText = "Copy to Clipboard";
+        toolTipText = "Copy to clipboard";
         showCopyConfirmation = false;
         await InvokeAsync(StateHasChanged);
     }

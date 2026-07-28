@@ -3,37 +3,112 @@
 
 <PageTitle>SQL Database Vector Search</PageTitle>
 
-<h1>SQL Database Vector Search</h1>
+<div class="hero p-4 p-md-5 mb-4 rounded-3 shadow-sm">
+    <h1 class="display-6 fw-semibold mb-3">
+        <Icon Name="IconName.Search" Color="IconColor.Primary" Class="me-2" />
+        SQL Database Vector Search
+    </h1>
+    <p class="lead mb-4">
+        A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native
+        <code>VECTOR</code> type in
+        <img src="/images/sqldatabase.svg" class="inline-logo" alt="Azure SQL Database" /> Azure SQL Database, with
+        <img src="/images/openai.svg" class="inline-logo" alt="Azure OpenAI" /> Azure OpenAI and
+        <a href="https://github.com/microsoft/agent-framework" target="_blank" rel="noopener">Microsoft Agent Framework</a>.
+    </p>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="/documents" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm">
+            <Icon Name="IconName.CloudArrowUpFill" Class="me-2" />Upload a document
+        </a>
+        <a href="/ask" class="btn btn-outline-primary px-4 py-2 fw-semibold">
+            <Icon Name="IconName.ChatDotsFill" Class="me-2" />Ask a question
+        </a>
+    </div>
+</div>
 
-<p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">
-    A Blazor Web App and Minimal API for Retrieval Augmented Generation (RAG) and vector search using the native VECTOR type in <img src="/images/sqldatabase.svg" style="height:1.5em;vertical-align:middle;" /> Azure SQL Database with <img src="/images/openai.svg" style="height:1.5em;vertical-align:middle;" /> Azure OpenAI and <a href="https://github.com/microsoft/agent-framework" target="_blank">Microsoft Agent Framework</a>.
-</p>
+<h2 class="h4 mb-3">
+    <Icon Name="IconName.Diagram3Fill" Color="IconColor.Secondary" Class="me-2" />
+    How it works
+</h2>
 
-<p>
-    This application allows you to:
-    <ul>
-        <li>Load documents (PDF, DOCX, TXT, MD)</li>
-        <li>Generate embeddings and save them as vectors in Azure SQL Database</li>
-        <li>Perform semantic search and RAG using Azure OpenAI agents</li>
-        <li>Interact via a Blazor Web App or programmatically via Minimal API</li>
-    </ul>
-    Document import, question reformulation, and RAG are orchestrated with <a href="https://github.com/microsoft/agent-framework" target="_blank">Microsoft Agent Framework</a>.
-</p>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <Icon Name="IconName.FileEarmarkArrowUpFill" Color="IconColor.Primary" Size="IconSize.x3" />
+                <h3 class="h6 mt-3 mb-2">1. Import</h3>
+                <p class="text-body-secondary mb-0 small">
+                    Upload a PDF, DOCX, TXT or MD file. Its content is split into chunks, and each chunk is turned into
+                    an embedding by an Agent Framework workflow.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <Icon Name="IconName.DatabaseFillCheck" Color="IconColor.Success" Size="IconSize.x3" />
+                <h3 class="h6 mt-3 mb-2">2. Store</h3>
+                <p class="text-body-secondary mb-0 small">
+                    Embeddings are persisted in Azure SQL Database using the native <code>VECTOR</code> type, so no
+                    external vector store is required.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body">
+                <Icon Name="IconName.ChatSquareQuoteFill" Color="IconColor.Info" Size="IconSize.x3" />
+                <h3 class="h6 mt-3 mb-2">3. Ask</h3>
+                <p class="text-body-secondary mb-0 small">
+                    Your question is reformulated with the conversation context, matched against the stored vectors, and
+                    answered with citations.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
 
-<h3>Supported Features</h3>
-<ul>
-    <li><strong>Microsoft Agent Framework orchestration</strong>: Import documents through an embedding workflow and answer questions with dedicated reformulation and RAG agents.</li>
-    <li><strong>Conversation history with question reformulation</strong>: Rewrite follow-up questions with the current conversation context before vector search.</li>
-    <li><strong>SQL vector-search context</strong>: Retrieve relevant chunks from Azure SQL Database through native VECTOR search.</li>
-    <li><strong>Information about token usage</strong>: Access token usage for reformulation and final answer generation.</li>
-    <li><strong>Response streaming</strong>: Receive answer tokens in real time in the chat page and streaming API.</li>
-    <li><strong>Markdown source citations</strong>: Get citations directly in the answer text with source name, page number when available, and a short supporting excerpt.</li>
+<h2 class="h4 mb-3">
+    <Icon Name="IconName.ListStars" Color="IconColor.Warning" Class="me-2" />
+    Supported features
+</h2>
+
+<ul class="list-group list-group-flush mb-4 shadow-sm rounded overflow-hidden border">
+    <li class="list-group-item">
+        <Icon Name="IconName.Diagram3Fill" Color="IconColor.Primary" Class="me-2" />
+        <strong>Microsoft Agent Framework orchestration</strong>: documents are imported through an embedding workflow,
+        and questions are answered by dedicated reformulation and RAG agents.
+    </li>
+    <li class="list-group-item">
+        <Icon Name="IconName.ArrowRepeat" Color="IconColor.Secondary" Class="me-2" />
+        <strong>Conversation history with question reformulation</strong>: follow-up questions are rewritten with the
+        current conversation context before the vector search is performed.
+    </li>
+    <li class="list-group-item">
+        <Icon Name="IconName.DatabaseFillCheck" Color="IconColor.Success" Class="me-2" />
+        <strong>SQL vector search</strong>: the most relevant chunks are retrieved from Azure SQL Database through
+        native <code>VECTOR</code> cosine-distance search.
+    </li>
+    <li class="list-group-item">
+        <Icon Name="IconName.CashCoin" Color="IconColor.Warning" Class="me-2" />
+        <strong>Token usage details</strong>: input, output and total tokens are reported for both question
+        reformulation and answer generation.
+    </li>
+    <li class="list-group-item">
+        <Icon Name="IconName.LightningChargeFill" Color="IconColor.Danger" Class="me-2" />
+        <strong>Response streaming</strong>: answers are streamed token by token in the chat page and through the
+        Server-Sent Events API.
+    </li>
+    <li class="list-group-item">
+        <Icon Name="IconName.ChatQuoteFill" Color="IconColor.Info" Class="me-2" />
+        <strong>Markdown source citations</strong>: citations are embedded in the answer with the source name, the page
+        number when available, and a short supporting excerpt.
+    </li>
 </ul>
 
-<p class="mt-3 p-3 rounded bg-light text-dark shadow-sm">
-    Try <a href="/documents">uploading a document</a> or <a href="/ask">ask a question</a> to get started!
-</p>
-
-<p class="mt-4">
-    <em>For API usage and more details, see the <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch#how-to-use" target="_blank">README</a>.</em>
+<p class="text-body-secondary small">
+    <Icon Name="IconName.InfoCircleFill" Color="IconColor.Info" Class="me-2" />
+    For API usage and more details, see the
+    <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch#how-to-use" target="_blank" rel="noopener">README</a>.
 </p>
