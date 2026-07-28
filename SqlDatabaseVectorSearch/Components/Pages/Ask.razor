@@ -46,10 +46,10 @@
                             @if (message.Text is null)
                             {
                                 <div class="card card-text d-inline-block p-3 px-3 m-1">
-                                    <div class="progress-chat" role="progressbar" aria-label="I'm thinking" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                        <div class="progress-bar-chat">
-                                            <div class="progress-bar-indeterminate"></div>
-                                        </div>
+                                    <div class="typing-indicator" role="status" aria-label="The assistant is typing">
+                                        <span class="typing-dot"></span>
+                                        <span class="typing-dot"></span>
+                                        <span class="typing-dot"></span>
                                     </div>
                                 </div>
                             }
