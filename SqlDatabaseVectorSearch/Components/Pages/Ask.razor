@@ -141,6 +141,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Scrolling here guarantees the browser DOM already contains the latest messages.
+        if (messages.Count > 0)
+        {
+            await EnsureMessageIsVisibleAsync();
+        }
+
         if (!firstRender)
         {
             return;
@@ -179,9 +185,7 @@
 
         question = null;
         await InvokeAsync(StateHasChanged);
-
-        await EnsureMessageIsVisibleAsync();
-
+        await Task.Yield();
         try
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
@@ -208,7 +212,6 @@
                 }
 
                 await InvokeAsync(StateHasChanged);
-
                 await EnsureMessageIsVisibleAsync();
             }
         }
@@ -221,8 +224,6 @@
         {
             isAsking = false;
             await InvokeAsync(StateHasChanged);
-
-            await EnsureMessageIsVisibleAsync();
         }
     }
 
