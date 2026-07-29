@@ -1,4 +1,4 @@
-# SQL Database Vector Search Sample
+# SQL Database Vector Search
 
 [![.NET 10](https://img.shields.io/badge/.NET-10-blue)](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 [![Minimal API](https://img.shields.io/badge/Minimal%20API-Available-green)](https://dotnet.microsoft.com/apps/aspnet/apis)
