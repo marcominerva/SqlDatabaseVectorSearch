@@ -102,15 +102,18 @@ builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<VectorSearchService>();
 builder.Services.AddScoped<ContextProvider>();
 
+builder.Services.AddSingleton<ExtractChunksExecutor>();
 builder.Services.AddSingleton<GenerateEmbeddingExecutor>();
 builder.Services.AddScoped<StoreEmbeddingExecutor>();   // This executor is registered as scoped because it uses the DbContext, which is also scoped.
 
 builder.AddWorkflow("EmbeddingWorkflow", (services, key) =>
 {
+    var extractChunksExecutor = services.GetRequiredService<ExtractChunksExecutor>();
     var generateEmbeddingExecutor = services.GetRequiredService<GenerateEmbeddingExecutor>();
     var storeEmbeddingExecutor = services.GetRequiredService<StoreEmbeddingExecutor>();
 
-    var workflow = new WorkflowBuilder(generateEmbeddingExecutor).WithName(key)
+    var workflow = new WorkflowBuilder(extractChunksExecutor).WithName(key)
+        .AddEdge(extractChunksExecutor, generateEmbeddingExecutor)
         .AddEdge(generateEmbeddingExecutor, storeEmbeddingExecutor)
         .WithOutputFrom(storeEmbeddingExecutor)
         .Build(validateOrphans: true);
@@ -122,7 +125,7 @@ builder.Services.AddAIAgent("ReformulationAgent", (services, key) =>
 {
     var chatClient = services.GetRequiredService<IChatClient>();
 
-    return chatClient.AsAIAgent(new ChatClientAgentOptions()
+    return chatClient.AsAIAgent(new()
     {
         Id = key.ToLowerInvariant(),
         Name = key,
@@ -210,7 +213,7 @@ builder.Services.AddAIAgent("RagAgent", (services, key) =>
 {
     var chatClient = services.GetRequiredService<IChatClient>();
 
-    return chatClient.AsAIAgent(new ChatClientAgentOptions
+    return chatClient.AsAIAgent(new()
     {
         Id = key.ToLowerInvariant(),
         Name = key,

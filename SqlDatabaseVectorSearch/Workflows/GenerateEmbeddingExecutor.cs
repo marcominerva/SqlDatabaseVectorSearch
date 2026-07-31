@@ -7,17 +7,14 @@ using SqlDatabaseVectorSearch.Settings;
 
 namespace SqlDatabaseVectorSearch.Workflows;
 
-public partial class GenerateEmbeddingExecutor(IServiceProvider serviceProvider, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions, ILogger<GenerateEmbeddingExecutor> logger) : Executor(nameof(GenerateEmbeddingExecutor))
+public partial class GenerateEmbeddingExecutor(IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, TokenizerService tokenizerService, IOptions<AppSettings> appSettingsOptions, ILogger<GenerateEmbeddingExecutor> logger) : Executor(nameof(GenerateEmbeddingExecutor))
 {
     private readonly AppSettings appSettings = appSettingsOptions.Value;
 
     [MessageHandler]
-    private async ValueTask<EmbeddingResponse> HandleAsync(EmbeddingRequest request, IWorkflowContext context, CancellationToken cancellationToken)
+    private async ValueTask<EmbeddingResponse> HandleAsync(ExtractChunksResponse chunks, IWorkflowContext context, CancellationToken cancellationToken)
     {
-        // Extract the contents of the file.
-        var decoder = serviceProvider.GetKeyedService<IContentDecoder>(request.ContentType) ?? throw new NotSupportedException($"Content type '{request.ContentType}' is not supported.");
-        var chunks = await decoder.DecodeAsync(request.Content, request.ContentType, cancellationToken);
-        var chunkContents = chunks.Select(p => p.Content).ToList();
+        var chunkContents = chunks.Chunks.Select(p => p.Content).ToList();
 
         // We get the token count of the whole document because it is the total number of tokens used by the embedding (it may be necessary, for example, for cost analysis).
         var tokenCount = tokenizerService.CountEmbeddingTokens(string.Join(" ", chunkContents));
@@ -33,7 +30,7 @@ public partial class GenerateEmbeddingExecutor(IServiceProvider serviceProvider,
             embeddings.AddRange(batchEmbeddings);
         }
 
-        return new EmbeddingResponse(request, chunks, embeddings, tokenCount);
+        return new EmbeddingResponse(chunks.Request, chunks.Chunks, embeddings, tokenCount);
     }
 }
 

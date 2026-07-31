@@ -186,6 +186,7 @@
         question = null;
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
+
         try
         {
             await using var scope = ServiceScopeFactory.CreateAsyncScope();
