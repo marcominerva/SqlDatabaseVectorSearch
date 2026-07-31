@@ -5,10 +5,10 @@
 <BlazorBootstrapLayout StickyHeader="true">
     <HeaderSection>
         <a href="/swagger" target="_blank" class="text-decoration-none" title="OpenAPI documentation">
-            <Icon Name="IconName.FileTypeJson" Class="ps-3 ps-lg-2" Size="IconSize.x2" Color="IconColor.Muted"></Icon>
+            <Icon Name="IconName.FileEarmarkCodeFill" Class="ps-3 ps-lg-2" Size="IconSize.x2" Color="IconColor.Info"></Icon>
         </a>
         <a href="https://github.com/marcominerva/SqlDatabaseVectorSearch" target="_blank" class="text-decoration-none" title="View on GitHub">
-            <Icon Name="IconName.Github" Class="ps-4 ps-lg-4" Size="IconSize.x2" Color="IconColor.Muted"></Icon>
+            <Icon Name="IconName.Github" Class="ps-4 ps-lg-4" Size="IconSize.x2" Color="IconColor.Dark"></Icon>
         </a>
     </HeaderSection>
 
@@ -44,8 +44,8 @@
     {
         navItems = [
             new() { Id = "1", Href = "/", IconName = IconName.HouseDoorFill, Text = "Home", Match = NavLinkMatch.All},
-            new() { Id = "2", Href= "/documents", IconName = IconName.FileText, Text = "Documents" },
-            new() { Id = "3", Href = "/ask", IconName = IconName.ChatDots, Text = "Ask"}
+            new() { Id = "2", Href= "/documents", IconName = IconName.FileEarmarkTextFill, Text = "Documents" },
+            new() { Id = "3", Href = "/ask", IconName = IconName.ChatDotsFill, Text = "Ask"}
         ];
 
         return navItems;

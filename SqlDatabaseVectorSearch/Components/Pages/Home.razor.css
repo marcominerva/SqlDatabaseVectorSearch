@@ -1,0 +1,14 @@
+.hero {
+    background: linear-gradient(135deg, #eef4ff 0%, #f8f9fa 100%);
+    border: 1px solid #e3e8f0;
+}
+
+.inline-logo {
+    height: 1.5em;
+    vertical-align: middle;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.15s ease-in-out;
+}

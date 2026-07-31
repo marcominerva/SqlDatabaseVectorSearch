@@ -1,6 +1,4 @@
 ﻿@page "/Error"
-@using System.Diagnostics
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <div class="d-flex align-items-center justify-content-center">
     <div class="text-center">
@@ -9,9 +7,9 @@
             <PageTitle>Page Not Found</PageTitle>
 
             <h1 class="display-1 fw-bold">404</h1>
-            <p class="fs-3"><span class="text-danger">Ops!</span> Page Not Found.</p>
+            <p class="fs-3"><span class="text-danger">Oops!</span> Page Not Found.</p>
             <p class="lead">
-                The page you're looking for does not exists.
+                The page you're looking for does not exist.
             </p>
         }
         else if (Code > 0)
@@ -19,9 +17,9 @@
             <PageTitle>Unexpected Error</PageTitle>
 
             <h1 class="display-1 fw-bold">500</h1>
-            <p class="fs-3"><span class="text-danger">Ops!</span> Unexpected error.</p>
+            <p class="fs-3"><span class="text-danger">Oops!</span> Unexpected error.</p>
             <p class="lead">
-                An unexpected error occurred while loading the page. Please, wait a minute and try again.
+                An unexpected error occurred while loading the page. Please wait a moment and try again.
             </p>
         }
 

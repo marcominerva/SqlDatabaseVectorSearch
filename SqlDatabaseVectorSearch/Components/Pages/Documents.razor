@@ -1,50 +1,54 @@
 ﻿@page "/documents"
 @using MimeMapping
 
-@inject IServiceProvider ServiceProvider
+@inject IServiceScopeFactory ServiceScopeFactory
 @inject IJSRuntime JSRuntime
 
 <ConfirmDialog @ref="dialog" />
 
 <PageTitle>Documents</PageTitle>
 
-<h4 class="mb-4">
-    <Icon Name="IconName.Upload" class="me-2" />
-    Upload new document
+<h4 class="mb-1">
+    <Icon Name="IconName.CloudArrowUpFill" Color="IconColor.Primary" class="me-2" />
+    Upload a new document
 </h4>
+<p class="text-body-secondary small mb-4">The document is split into chunks, and an embedding is generated and stored for each chunk.</p>
 
 <EditForm Model="Model" Enhance OnValidSubmit="UploadFile">
     <DataAnnotationsValidator />
 
-    <div class="row">
-        <div class="col-md-5 col-sm-4 col-5">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <Tooltip Title="PDF, DOCX, TXT and MD files are supported" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex text-body-secondary" Name="IconName.InfoCircle"></Icon>
-                    </Tooltip>
-                </span>
-                <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept=".pdf,.docx,.txt,.md" id="fileInput" />
+    <fieldset disabled="@isUploading">
+        <div class="row">
+            <div class="col-md-5 col-sm-4 col-5">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <Tooltip Title="@($"{UploadDocument.SupportedExtensionsDescription} files are supported, up to {UploadDocument.MaxFileSizeInMegaBytes} MB")" Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                            <Icon Class="d-flex" Color="IconColor.Info" Name="IconName.InfoCircle"></Icon>
+                        </Tooltip>
+                    </span>
+                    <InputFile class="form-control" OnChange="@((e) => Model.File = e.File)" accept="@UploadDocument.AcceptedFileTypes" id="fileInput" />
+                </div>
+                <ValidationMessage For="@(() => Model.File)" />
+            </div>
+            <div class="col-md-5 col-sm-5 col-5">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
+                            <Icon Class="d-flex me-2" Color="IconColor.Warning" Name="IconName.KeyFill"></Icon>
+                        </Tooltip>
+                        Document ID
+                    </span>
+                    <TextInput Placeholder="Enter a valid GUID or leave empty for auto-generation" @bind-Value="@Model.DocumentId" />
+                </div>
+                <ValidationMessage For="@(() => Model.DocumentId)" />
+            </div>
+            <div class="col-md-2 col-sm-3 col-2">
+                <div class="d-grid gap-2">
+                    <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)" Class="w-100 py-2 fw-semibold shadow-sm"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
+                </div>
             </div>
         </div>
-        <div class="col-md-5 col-sm-5 col-5">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <Tooltip Title="The unique identifier (GUID) of the document. If not provided, a new one will be generated. If you specify an existing Document ID, the corresponding document will be overwritten." Color="TooltipColor.Primary" Placement="TooltipPlacement.Bottom">
-                        <Icon Class="d-flex text-body-secondary me-2" Name="IconName.InfoCircle"></Icon>
-                    </Tooltip>
-                    Document ID
-                </span>
-                <TextInput Placeholder="Enter a valid GUID or leave empty for auto-generation" @bind-Value="@Model.DocumentId" />
-            </div>
-            <ValidationMessage For="@(() => Model.DocumentId)" />
-        </div>
-        <div class="col-md-2 col-sm-3 col-2">
-            <div class="d-grid gap-2">
-                <Button @ref="uploadButton" Type="ButtonType.Submit" Color="ButtonColor.Primary" To="#" Disabled="@(Model.File is null)" Class="w-100 py-2 fw-semibold shadow-sm"><Icon Name="IconName.Upload" /><span class="d-none d-lg-inline ps-3">Upload</span></Button>
-            </div>
-        </div>
-    </div>
+    </fieldset>
 </EditForm>
 
 @if (isLoading && documents.Count == 0)
@@ -56,55 +60,66 @@
 else
 {
     <h4 class="mt-4 mb-4">
-        <Icon Name="IconName.Files" class="me-2" />
+        <Icon Name="IconName.FileEarmarkTextFill" Color="IconColor.Info" class="me-2" />
         Available documents
+        <span class="badge bg-secondary-subtle text-secondary-emphasis ms-2 align-middle">@documents.Count</span>
     </h4>
 
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 border rounded overflow-hidden">
-            <thead class="table-light sticky-top">
-                <tr>
-                    <th style="width:40px;"></th>
-                    <th class="text-secondary">ID</th>
-                    <th class="text-secondary">Name</th>
-                    <th class="text-secondary">Content type</th>
-                    <th class="text-secondary text-center">Chunks</th>
-                    <th class="text-secondary">Created</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var document in documents)
-                {
-                    <tr class="@((document.IsSelected ? "table-primary" : null))">
-                        <td>
-                            <div class="d-flex justify-content-center align-items-center">
-                                <CheckboxInput @bind-Value="document.IsSelected" />
-                            </div>
-                        </td>
-                        <td class="text-break small">@document.Id</td>
-                        <td class="fw-medium">@document.Name</td>
-                        <td>
-                            <span class="badge content-type-badge px-2 py-1 rounded-pill small">
-                                @document.ContentType
-                            </span>
-                        </td>
-                        <td class="text-center">@document.ChunkCount</td>
-                        <td class="small text-secondary">@document.LocalCreationDateString</td>
+    @if (documents.Count == 0)
+    {
+        <div class="text-center border rounded py-5 text-body-secondary">
+            <Icon Name="IconName.Inbox" Color="IconColor.Secondary" Size="IconSize.x3" />
+            <p class="mt-3 mb-0">No documents have been indexed yet. Upload one to get started.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 border rounded overflow-hidden">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="width:40px;"></th>
+                        <th class="text-secondary">ID</th>
+                        <th class="text-secondary">Name</th>
+                        <th class="text-secondary">Content type</th>
+                        <th class="text-secondary text-center">Chunks</th>
+                        <th class="text-secondary">Created</th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="my-4"></div>
-    <div class="row">
-        <div class="col-md-2 col-sm-3 col-2">
-            <div class="d-grid gap-2">
-                <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments" Class="w-100 py-2 fw-semibold shadow-sm">
-                    <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
-                </Button>
+                </thead>
+                <tbody>
+                    @foreach (var document in documents)
+                    {
+                        <tr class="@((document.IsSelected ? "table-primary" : null))">
+                            <td>
+                                <div class="d-flex justify-content-center align-items-center">
+                                    <CheckboxInput @bind-Value="document.IsSelected" />
+                                </div>
+                            </td>
+                            <td class="text-break small">@document.Id</td>
+                            <td class="fw-medium">@document.Name</td>
+                            <td>
+                                <span class="badge content-type-badge px-2 py-1 rounded-pill small">
+                                    @document.ContentType
+                                </span>
+                            </td>
+                            <td class="text-center">@document.ChunkCount</td>
+                            <td class="small text-secondary">@document.LocalCreationDateString</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="my-4"></div>
+        <div class="row">
+            <div class="col-md-2 col-sm-3 col-2">
+                <div class="d-grid gap-2">
+                    <Button @ref="deleteButton" Color="ButtonColor.Danger" Disabled="@(!documents.Any(d => d.IsSelected))" @onclick="DeleteSelectedDocuments" Class="w-100 py-2 fw-semibold shadow-sm">
+                        <Icon Name="IconName.Trash" /><span class="d-none d-lg-inline ps-3">Delete</span>
+                    </Button>
+                </div>
             </div>
         </div>
-    </div>
+    }
 }
 
 @code {
@@ -113,6 +128,7 @@ else
     private Button deleteButton = default!;
 
     private bool isLoading = true;
+    private bool isUploading;
     private IList<SelectableDocument> documents = [];
 
     private UploadDocument Model { get; set; } = new();
@@ -127,10 +143,10 @@ else
             return;
         }
 
-        await using var scope = ServiceProvider.CreateAsyncScope();
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
         await LoadDocumentsAsync(scope.ServiceProvider);
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadDocumentsAsync(IServiceProvider services)
@@ -166,20 +182,22 @@ else
 
         uploadButton.ShowLoading();
 
+        isUploading = true;
+        await InvokeAsync(StateHasChanged);
+
         var fileName = Model.File.Name;
 
         try
         {
-            await using var inputStream = Model.File.OpenReadStream(20 * 1024 * 1024); // 20 MB
+            await using var inputStream = Model.File.OpenReadStream(UploadDocument.MaxFileSize);
             await using var stream = await inputStream.GetMemoryStreamAsync();
 
-            await using var scope = ServiceProvider.CreateAsyncScope();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var vectorSearchService = scope.ServiceProvider.GetRequiredService<VectorSearchService>();
 
-            var documentId = string.IsNullOrWhiteSpace(Model.DocumentId) ? null : (Guid?)Guid.Parse(Model.DocumentId);
-            await vectorSearchService.ImportAsync(stream, fileName, MimeUtility.GetMimeMapping(fileName), documentId);
+            await vectorSearchService.ImportAsync(EmbeddingRequest.Create(stream, fileName, Model.GetDocumentId()));
 
-            ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document {fileName} has been successfully uploaded and indexed."));
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Success, "Upload document", $"The document '{fileName}' has been successfully uploaded and indexed."));
 
             Model = new UploadDocument();
             await JSRuntime.InvokeVoidAsync("resetFileInput", "fileInput");
@@ -188,17 +206,20 @@ else
         }
         catch (Exception ex)
         {
-            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document {fileName}: {ex.Message}"));
+            ToastService.Notify(await CreateToastMessageAsync(ToastType.Danger, "Upload error", $"There was an error while uploading the document '{fileName}': {ex.Message}"));
         }
         finally
         {
             uploadButton.HideLoading();
+
+            isUploading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task DeleteSelectedDocuments()
     {
-        var selectedDocumentIds = documents?.Where(d => d.IsSelected).Select(d => d.Id) ?? [];
+        var selectedDocumentIds = documents.Where(d => d.IsSelected).Select(d => d.Id);
 
         var options = new ConfirmDialogOptions
         {
@@ -223,7 +244,7 @@ else
         {
             deleteButton.ShowLoading();
 
-            await using var scope = ServiceProvider.CreateAsyncScope();
+            await using var scope = ServiceScopeFactory.CreateAsyncScope();
             var documentService = scope.ServiceProvider.GetRequiredService<DocumentService>();
 
             await documentService.DeleteAsync(selectedDocumentIds);
@@ -268,11 +289,46 @@ else
         public string LocalCreationDateString { get; set; } = string.Empty;
     }
 
-    public class UploadDocument
+    public class UploadDocument : IValidatableObject
     {
+        public const int MaxFileSizeInMegaBytes = 20;
+
+        public const long MaxFileSize = MaxFileSizeInMegaBytes * 1024 * 1024;
+
+        public static readonly string[] SupportedExtensions = [".pdf", ".docx", ".txt", ".md"];
+
+        public static string AcceptedFileTypes { get; } = string.Join(',', SupportedExtensions);
+
+        public static string SupportedExtensionsDescription { get; } = string.Join(", ", SupportedExtensions.Select(e => e.TrimStart('.').ToUpperInvariant()));
+
         public IBrowserFile? File { get; set; }
 
-        [RegularExpression(@"^(\{|\()?[0-9a-fA-F]{8}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{4}(-?)[0-9a-fA-F]{12}(\}|\))?$", ErrorMessage = "Invalid GUID format.")]
         public string? DocumentId { get; set; }
+
+        public Guid? GetDocumentId()
+            => Guid.TryParse(DocumentId, out var documentId) ? documentId : null;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!string.IsNullOrWhiteSpace(DocumentId) && !Guid.TryParse(DocumentId, out _))
+            {
+                yield return new ValidationResult("Invalid GUID format.", [nameof(DocumentId)]);
+            }
+
+            if (File is null)
+            {
+                yield break;
+            }
+
+            if (!SupportedExtensions.Contains(Path.GetExtension(File.Name), StringComparer.OrdinalIgnoreCase))
+            {
+                yield return new ValidationResult($"Only {SupportedExtensionsDescription} files are supported.", [nameof(File)]);
+            }
+
+            if (File.Size > MaxFileSize)
+            {
+                yield return new ValidationResult($"The file exceeds the maximum allowed size of {MaxFileSizeInMegaBytes} MB.", [nameof(File)]);
+            }
+        }
     }
 }

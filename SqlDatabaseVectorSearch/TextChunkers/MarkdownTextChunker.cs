@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel.Text;
 using SqlDatabaseVectorSearch.Services;
 using SqlDatabaseVectorSearch.Settings;
+using SqlDatabaseVectorSearch.TextChunkers.Implementations;
 
 namespace SqlDatabaseVectorSearch.TextChunkers;
 
@@ -11,8 +11,8 @@ public class MarkdownTextChunker(TokenizerService tokenizerService, IOptions<App
 
     public IList<string> Split(string text)
     {
-        var lines = TextChunker.SplitMarkDownLines(text, appSettings.MaxTokensPerLine, tokenizerService.CountEmbeddingTokens);
-        var paragraphs = TextChunker.SplitMarkdownParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountEmbeddingTokens);
+        var lines = PlainTextChunker.SplitMarkdownLines(text, appSettings.MaxTokensPerLine, tokenizerService.CountEmbeddingTokens);
+        var paragraphs = PlainTextChunker.SplitMarkdownParagraphs(lines, appSettings.MaxTokensPerParagraph, appSettings.OverlapTokens, tokenCounter: tokenizerService.CountEmbeddingTokens);
 
         return paragraphs;
     }
