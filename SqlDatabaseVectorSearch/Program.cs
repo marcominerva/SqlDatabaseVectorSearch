@@ -100,7 +100,7 @@ builder.Services.AddSingleton<TokenizerService>();
 
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<VectorSearchService>();
-builder.Services.AddScoped<ContextProvider>();
+builder.Services.AddScoped<DocumentContextProviderService>();
 
 builder.Services.AddSingleton<ExtractChunksExecutor>();
 builder.Services.AddSingleton<GenerateEmbeddingExecutor>();
@@ -249,7 +249,7 @@ builder.Services.AddAIAgent("RagAgent", (services, key) =>
                     && m.GetAgentRequestMessageSourceType() != AgentRequestMessageSourceType.AIContextProvider);
             }
         }),
-        AIContextProviders = [new TextSearchProvider(services.GetRequiredService<ContextProvider>().SearchAsync, textSearchOptions)]
+        AIContextProviders = [new TextSearchProvider(services.GetRequiredService<DocumentContextProviderService>().SearchAsync, textSearchOptions)]
     },
     loggerFactory: services.GetRequiredService<ILoggerFactory>(),
     services: services);

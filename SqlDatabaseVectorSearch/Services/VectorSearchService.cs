@@ -3,13 +3,8 @@ using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Hosting;
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Data.SqlTypes;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Options;
-using SqlDatabaseVectorSearch.Data;
 using SqlDatabaseVectorSearch.Models;
-using SqlDatabaseVectorSearch.Settings;
 using SqlDatabaseVectorSearch.Workflows;
 
 namespace SqlDatabaseVectorSearch.Services;
@@ -85,30 +80,5 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
         var response = updates.ToAgentResponse();
 
         yield return new(question.ConversationId, StreamState.End, new TokenUsageResponse(null, response.Usage));
-    }
-}
-
-public class ContextProvider(ApplicationDbContext dbContext, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, IOptions<AppSettings> appSettingsOptions)
-{
-    private readonly AppSettings appSettings = appSettingsOptions.Value;
-
-    public async Task<IEnumerable<TextSearchProvider.TextSearchResult>> SearchAsync(string query, CancellationToken cancellationToken)
-    {
-        // Perform Vector Search on SQL Database.
-        var questionEmbedding = await embeddingGenerator.GenerateVectorAsync(query, cancellationToken: cancellationToken);
-        var embeddingVector = new SqlVector<float>(questionEmbedding);
-
-        var chunks = await dbContext.DocumentChunks.Include(c => c.Document)
-                    .OrderBy(c => EF.Functions.VectorDistance("cosine", c.Embedding, embeddingVector))
-                    .Take(appSettings.MaxRelevantChunks).Select(c => new TextSearchProvider.TextSearchResult
-                    {
-                        SourceLink = c.Id.ToString().ToLowerInvariant(),
-                        SourceName = c.Document.Name,
-                        Text = c.Content,
-                        RawRepresentation = c.PageNumber
-                    })
-                    .ToListAsync(cancellationToken);
-
-        return chunks;
     }
 }
