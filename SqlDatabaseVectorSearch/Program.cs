@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using OpenAI.Responses;
+using SqlDatabaseVectorSearch.Agents;
 using SqlDatabaseVectorSearch.Components;
 using SqlDatabaseVectorSearch.ContentDecoders;
 using SqlDatabaseVectorSearch.Data;
@@ -161,45 +162,6 @@ builder.Services.AddAIAgent("ReformulationAgent", (services, key) =>
     services: services);
 });
 
-var textSearchOptions = new TextSearchProviderOptions()
-{
-    ContextFormatter = results =>
-    {
-        var sb = new StringBuilder();
-
-        sb.AppendLine("## Additional Context");
-        sb.AppendLine("Use the excerpts below to answer the user.");
-        sb.AppendLine("Citation rules:");
-        sb.AppendLine("- Do NOT add inline citations.");
-        sb.AppendLine("- At the END of your answer, add a sources section that follows this template exactly, where the sources label and the page label are localized in the same language as the user's question:");
-        sb.AppendLine("  *localized-sources-label*");
-        sb.AppendLine("  1. **SourceName**, localized-page-label PageNumber: *supporting excerpt of about 20-30 words*");
-        sb.AppendLine("- Omit the page label and the page number when the page number is not available.");
-        sb.AppendLine("- Do NOT use headings or links in the sources section.");
-        sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
-        sb.AppendLine();
-
-        sb.AppendLine("### Sources");
-        foreach (var (i, r) in results.Index())
-        {
-            sb.AppendLine($"[{i + 1}] {GetSourceName(r, i)}");
-            sb.AppendLine(r.Text);
-            sb.AppendLine("---");
-        }
-
-        return sb.ToString();
-
-        static string GetSourceName(TextSearchProvider.TextSearchResult result, int index)
-        {
-            var name = string.IsNullOrWhiteSpace(result.SourceName) ? $"Source {index + 1}" : result.SourceName;
-            var pageNumber = result.RawRepresentation is int number ? number : (int?)null;
-            var pageText = pageNumber.HasValue ? $", page {pageNumber}" : string.Empty;
-
-            return $"{name}{pageText}";
-        }
-    }
-};
-
 builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions = new()
@@ -213,7 +175,46 @@ builder.Services.AddAIAgent("RagAgent", (services, key) =>
 {
     var chatClient = services.GetRequiredService<IChatClient>();
 
-    return chatClient.AsAIAgent(new()
+    var textSearchOptions = new TextSearchProviderOptions()
+    {
+        ContextFormatter = results =>
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine("## Additional Context");
+            sb.AppendLine("Use the excerpts below to answer the user.");
+            sb.AppendLine("Citation rules:");
+            sb.AppendLine("- Do NOT add inline citations.");
+            sb.AppendLine("- At the END of your answer, add a sources section that follows this template exactly, where the sources label and the page label are localized in the same language as the user's question:");
+            sb.AppendLine("  *localized-sources-label*");
+            sb.AppendLine("  1. **SourceName**, localized-page-label PageNumber: *supporting excerpt of about 20-30 words*");
+            sb.AppendLine("- Omit the page label and the page number when the page number is not available.");
+            sb.AppendLine("- Do NOT use headings or links in the sources section.");
+            sb.AppendLine("- Include ONLY sources you actually used. No duplicates.");
+            sb.AppendLine();
+
+            sb.AppendLine("### Sources");
+            foreach (var (i, r) in results.Index())
+            {
+                sb.AppendLine($"[{i + 1}] {GetSourceName(r, i)}");
+                sb.AppendLine(r.Text);
+                sb.AppendLine("---");
+            }
+
+            return sb.ToString();
+
+            static string GetSourceName(TextSearchProvider.TextSearchResult result, int index)
+            {
+                var name = string.IsNullOrWhiteSpace(result.SourceName) ? $"Source {index + 1}" : result.SourceName;
+                var pageNumber = result.RawRepresentation is int number ? number : (int?)null;
+                var pageText = pageNumber.HasValue ? $", page {pageNumber}" : string.Empty;
+
+                return $"{name}{pageText}";
+            }
+        }
+    };
+
+    var ragAgent = chatClient.AsAIAgent(new()
     {
         Id = key.ToLowerInvariant(),
         Name = key,
@@ -253,6 +254,9 @@ builder.Services.AddAIAgent("RagAgent", (services, key) =>
     },
     loggerFactory: services.GetRequiredService<ILoggerFactory>(),
     services: services);
+
+    // The reformulation is performed by the agent itself, so that a single run is enough to get both the reformulated question and the answer.
+    return new KnowledgeSearchAgent(ragAgent, services.GetRequiredKeyedService<AIAgent>("ReformulationAgent"));
 }, ServiceLifetime.Scoped)
 .WithSessionStore((services, _) =>
 {

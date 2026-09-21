@@ -2,13 +2,14 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Workflows;
-using Microsoft.Extensions.AI;
+using SqlDatabaseVectorSearch.Agents;
+using SqlDatabaseVectorSearch.Extensions;
 using SqlDatabaseVectorSearch.Models;
 using SqlDatabaseVectorSearch.Workflows;
 
 namespace SqlDatabaseVectorSearch.Services;
 
-public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")] Workflow workflow, [FromKeyedServices("ReformulationAgent")] AIAgent reformulationAgent, [FromKeyedServices("RagAgent")] AIAgent ragAgent,
+public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")] Workflow workflow, [FromKeyedServices("RagAgent")] AIAgent ragAgent,
     [FromKeyedServices("RagAgent")] AgentSessionStore sessionStore)
 {
     public async Task<StoreEmbeddingResponse> ImportAsync(EmbeddingRequest request, CancellationToken cancellationToken = default)
@@ -28,46 +29,32 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
 
     public async Task<Response> AskQuestionAsync(Question question, bool reformulate = true, CancellationToken cancellationToken = default)
     {
-        UsageDetails? reformulationUsage = null;
-        var reformulatedQuestion = question.Text;
-        var session = await sessionStore.GetSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
+        var session = await sessionStore.GetOrCreateSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
 
-        if (reformulate)
-        {
-            // Reformulates the question taking into account the context of the chat to perform keyword search and embeddings.
-            var reformulationResponse = await reformulationAgent.RunAsync(question.Text, session, cancellationToken: cancellationToken);
-            reformulatedQuestion = reformulationResponse.Text;
-            reformulationUsage = reformulationResponse.Usage;
-        }
+        // The agent reformulates the question taking into account the context of the chat (to perform keyword search and embeddings) and then answers it.
+        var response = await ragAgent.RunAsync(question.Text, session, new KnowledgeSearchAgentRunOptions { Reformulate = reformulate }, cancellationToken);
 
-        var response = await ragAgent.RunAsync(reformulatedQuestion, session, cancellationToken: cancellationToken);
+        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session, cancellationToken);
 
-        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session!, cancellationToken);
+        response.TryGetReformulation(out var reformulatedQuestion, out var reformulationUsage);
 
-        return new(question.ConversationId, question.Text, reformulatedQuestion, response.Text, null, new TokenUsageResponse(reformulationUsage, response.Usage));
+        return new(question.ConversationId, question.Text, reformulatedQuestion ?? question.Text, response.Text, null, new TokenUsageResponse(reformulationUsage, response.Usage));
     }
 
     public async IAsyncEnumerable<Response> AskStreamingAsync(Question question, bool reformulate = true, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        UsageDetails? reformulationUsage = null;
-        var reformulatedQuestion = question.Text;
-        var session = await sessionStore.GetSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
-
-        if (reformulate)
-        {
-            // Reformulates the question taking into account the context of the chat to perform keyword search and embeddings.
-            var reformulationResponse = await reformulationAgent.RunAsync(question.Text, session, cancellationToken: cancellationToken);
-            reformulatedQuestion = reformulationResponse.Text;
-            reformulationUsage = reformulationResponse.Usage;
-        }
-
-        // The first message contains the question and the corresponding token usage (if reformulated).
-        yield return new(question.ConversationId, question.Text, reformulatedQuestion, null, StreamState.Start, new(reformulationUsage, null));
-
+        var session = await sessionStore.GetOrCreateSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
         var updates = new List<AgentResponseUpdate>();
 
-        await foreach (var update in ragAgent.RunStreamingAsync(reformulatedQuestion, session, cancellationToken: cancellationToken))
+        await foreach (var update in ragAgent.RunStreamingAsync(question.Text, session, new KnowledgeSearchAgentRunOptions { Reformulate = reformulate }, cancellationToken))
         {
+            // The update that carries the reformulation is the first one and contains the question and the corresponding token usage (if reformulated).
+            if (update.TryGetReformulation(out var reformulatedQuestion, out var reformulationUsage))
+            {
+                yield return new(question.ConversationId, question.Text, reformulatedQuestion ?? question.Text, null, StreamState.Start, new(reformulationUsage, null));
+                continue;
+            }
+
             updates.Add(update);
             if (!string.IsNullOrEmpty(update.Text))
             {
@@ -75,7 +62,8 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
             }
         }
 
-        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session!, cancellationToken);
+        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session, cancellationToken);
+
         var response = updates.ToAgentResponse();
 
         yield return new(question.ConversationId, StreamState.End, new TokenUsageResponse(null, response.Usage));

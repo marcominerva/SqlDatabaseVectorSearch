@@ -101,7 +101,7 @@ Embeddings and chat completion are orchestrated with [Microsoft Agent Framework]
 
 1. Documents are uploaded through the API and processed by the `EmbeddingWorkflow`.
 2. The workflow converts the uploaded file into text, chunks it, generates embeddings, and stores documents, chunks, and VECTOR embeddings in Azure SQL Database or SQL Server 2025.
-3. When a question is asked, the `ReformulationAgent` can rewrite it using the current conversation context.
+3. When a question is asked, the `RagAgent` (a `KnowledgeSearchAgent` that wraps the actual RAG agent) internally delegates to the `ReformulationAgent`, which can rewrite the question using the current conversation context. In this way a single agent run performs both the reformulation and the answer, and the conversation session keeps storing only the reformulated questions and the related answers.
 4. The `RagAgent` receives relevant SQL vector-search results through a `TextSearchProvider` and answers using only the provided context.
 5. Sources are not returned as a separate JSON collection. They are formatted directly in the Markdown answer.
 
