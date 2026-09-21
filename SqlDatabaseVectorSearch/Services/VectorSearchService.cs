@@ -1,7 +1,6 @@
 ﻿using System.Data;
 using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
-using Microsoft.Agents.AI.Hosting;
 using Microsoft.Agents.AI.Workflows;
 using Microsoft.Extensions.AI;
 using SqlDatabaseVectorSearch.Models;
@@ -31,7 +30,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
     {
         UsageDetails? reformulationUsage = null;
         var reformulatedQuestion = question.Text;
-        var session = await sessionStore.GetSessionAsync(ragAgent, question.ConversationId.ToString(), cancellationToken);
+        var session = await sessionStore.GetSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
 
         if (reformulate)
         {
@@ -43,7 +42,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
 
         var response = await ragAgent.RunAsync(reformulatedQuestion, session, cancellationToken: cancellationToken);
 
-        await sessionStore.SaveSessionAsync(ragAgent, question.ConversationId.ToString(), session, cancellationToken);
+        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session!, cancellationToken);
 
         return new(question.ConversationId, question.Text, reformulatedQuestion, response.Text, null, new TokenUsageResponse(reformulationUsage, response.Usage));
     }
@@ -52,7 +51,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
     {
         UsageDetails? reformulationUsage = null;
         var reformulatedQuestion = question.Text;
-        var session = await sessionStore.GetSessionAsync(ragAgent, question.ConversationId.ToString(), cancellationToken);
+        var session = await sessionStore.GetSessionAsync(ragAgent, new(question.ConversationId.ToString()), cancellationToken);
 
         if (reformulate)
         {
@@ -76,7 +75,7 @@ public partial class VectorSearchService([FromKeyedServices("EmbeddingWorkflow")
             }
         }
 
-        await sessionStore.SaveSessionAsync(ragAgent, question.ConversationId.ToString(), session, cancellationToken);
+        await sessionStore.SaveSessionAsync(ragAgent, new(question.ConversationId.ToString()), session!, cancellationToken);
         var response = updates.ToAgentResponse();
 
         yield return new(question.ConversationId, StreamState.End, new TokenUsageResponse(null, response.Usage));

@@ -1,15 +1,14 @@
 ﻿using Microsoft.Agents.AI;
-using Microsoft.Agents.AI.Hosting;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace SqlDatabaseVectorSearch.Services;
 
 public class HybridCacheSessionStoreService(HybridCache cache) : AgentSessionStore
 {
-    public override async ValueTask<AgentSession> GetSessionAsync(AIAgent agent, string conversationId, CancellationToken cancellationToken = default)
+    public override async ValueTask<AgentSession?> GetSessionAsync(AIAgent agent, AgentSessionStoreKey key, CancellationToken cancellationToken = default)
     {
-        var key = GetKey(agent, conversationId);
-        var sessionContent = await cache.GetOrCreateAsync(key, async ct =>
+        var conversationId = GetKey(agent, key);
+        var sessionContent = await cache.GetOrCreateAsync(conversationId, async ct =>
         {
             var session = await agent.CreateSessionAsync(ct);
             return await agent.SerializeSessionAsync(session, cancellationToken: ct);
@@ -18,20 +17,21 @@ public class HybridCacheSessionStoreService(HybridCache cache) : AgentSessionSto
         return await agent.DeserializeSessionAsync(sessionContent, cancellationToken: cancellationToken);
     }
 
-    public override async ValueTask SaveSessionAsync(AIAgent agent, string conversationId, AgentSession session, CancellationToken cancellationToken = default)
+    public override async ValueTask SaveSessionAsync(AIAgent agent, AgentSessionStoreKey key, AgentSession session, CancellationToken cancellationToken = default)
     {
-        var key = GetKey(agent, conversationId);
+        var conversationId = GetKey(agent, key);
         var sessionContent = await agent.SerializeSessionAsync(session, cancellationToken: cancellationToken);
 
-        await cache.SetAsync(key, sessionContent, cancellationToken: cancellationToken);
+        await cache.SetAsync(conversationId, sessionContent, cancellationToken: cancellationToken);
     }
 
-    public override async ValueTask DeleteSessionAsync(AIAgent agent, string conversationId, CancellationToken cancellationToken = default)
+    public string GetKey(AIAgent agent, AgentSessionStoreKey key)
     {
-        var key = GetKey(agent, conversationId);
-        await cache.RemoveAsync(key, cancellationToken);
-    }
+        if (key.Partitions?.TryGetValue("isolation", out var isolationKey) == true)
+        {
+            return $"{agent.Id}:{isolationKey}:{key.SessionId}";
+        }
 
-    private static string GetKey(AIAgent agent, string conversationId)
-        => $"{agent.Id}:{conversationId}";
+        return $"{agent.Id}:{key.SessionId}";
+    }
 }
