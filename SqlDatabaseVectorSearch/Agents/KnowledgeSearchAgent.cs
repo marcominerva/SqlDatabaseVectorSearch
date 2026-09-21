@@ -62,14 +62,14 @@ public sealed class KnowledgeSearchAgent(AIAgent innerAgent, AIAgent reformulati
             return new(messages);
         }
 
-        var response = await reformulationAgent.RunAsync(messages, session, cancellationToken: cancellationToken);
-        if (string.IsNullOrWhiteSpace(response.Text))
+        var reformulation = await reformulationAgent.RunAsync(messages, session, cancellationToken: cancellationToken);
+        if (string.IsNullOrWhiteSpace(reformulation.Text))
         {
             // The reformulation agent returned an empty response, so we just return the original messages and no reformulated question.
-            return new(messages, ReformulatedQuestion: null, response.Usage);
+            return new(messages, ReformulatedQuestion: null, reformulation.Usage);
         }
 
-        return new([new ChatMessage(ChatRole.User, response.Text)], ReformulatedQuestion: response.Text, response.Usage);
+        return new([new ChatMessage(ChatRole.User, reformulation.Text)], ReformulatedQuestion: reformulation.Text, reformulation.Usage);
     }
 
     private static AdditionalPropertiesDictionary CreateProperties(Reformulation reformulation, AdditionalPropertiesDictionary? properties = null)
