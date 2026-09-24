@@ -25,7 +25,7 @@ public class HybridCacheSessionStoreService(HybridCache cache) : AgentSessionSto
         await cache.SetAsync(conversationId, sessionContent, cancellationToken: cancellationToken);
     }
 
-    public string GetKey(AIAgent agent, AgentSessionStoreKey key)
+    private static string GetKey(AIAgent agent, AgentSessionStoreKey key)
     {
         if (key.Partitions?.TryGetValue("isolation", out var isolationKey) == true)
         {
