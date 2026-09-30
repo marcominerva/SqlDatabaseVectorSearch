@@ -45,6 +45,10 @@ public sealed class KnowledgeSearchAgent(AIAgent innerAgent, AIAgent reformulati
         // The first update carries no content and is used only to notify the reformulation outcome before the answer starts streaming.
         yield return new AgentResponseUpdate
         {
+            AgentId = Id,
+            AuthorName = Name,
+            Role = ChatRole.Assistant,
+            CreatedAt = DateTimeOffset.UtcNow,
             AdditionalProperties = CreateProperties(reformulation)
         };
 
